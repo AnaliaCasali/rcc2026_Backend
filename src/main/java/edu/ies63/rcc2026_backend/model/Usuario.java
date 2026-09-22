@@ -14,18 +14,25 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.Email;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
+import java.util.List;
 
 @Entity
 @Table(name = "Usuarios")
 @Data // getters y setters, toString, equals, etc
 @NoArgsConstructor // constructor sin argumentos
 @AllArgsConstructor // constructor con argumentos
-public class Usuario {
+@Builder
+public class Usuario implements UserDetails {
   // id, username, password y role OBLIGATORIOS para UserDetails
   @Id
   @GeneratedValue(strategy= GenerationType.IDENTITY)
@@ -60,4 +67,28 @@ public class Usuario {
   // en vez de eliminar la cuenta, estado de cuenta
   private boolean debaja = false;
 
+  @Override
+  public Collection<? extends GrantedAuthority> getAuthorities() {
+    return List.of(new SimpleGrantedAuthority("ROLE_" + role.name()));
+  }
+
+  @Override
+  public boolean isAccountNonExpired() {
+    return true;
+  }
+
+  @Override
+  public boolean isAccountNonLocked() {
+    return true;
+  }
+
+  @Override
+  public boolean isCredentialsNonExpired() {
+    return true;
+  }
+
+  @Override
+  public boolean isEnabled() {
+    return !debaja;
+  }
 }
