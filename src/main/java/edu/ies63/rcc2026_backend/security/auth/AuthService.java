@@ -27,14 +27,11 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AuthService {
 
-    private final UsuarioRepository userRepository;
-    private final LocalidadRepository localidadRepository;
-    private final PasswordEncoder passwordEncoder;
-    private final JwtService jwtService;
-    private final AuthenticationManager authenticationManager;
-
+  private final UsuarioRepository userRepository;
+  private final LocalidadRepository localidadRepository;
   private final PasswordEncoder passwordEncoder;
   private final JwtService jwtService;
+  private final AuthenticationManager authenticationManager;
 
   public AuthResponse register(RegisterRequest request) {
     // 1. Barrera de seguridad contra escalada de privilegios
@@ -44,9 +41,8 @@ public class AuthService {
 
     // 2. Validar si el usuario ya existe
     if (userRepository.findByUsername(request.username()).isPresent()) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "El usuario ya existe: " + request.username());
-        }
+      throw new ResponseStatusException(HttpStatus.CONFLICT, "El usuario ya existe: " + request.username());
+    }
 
     // 3. Constructor base del usuario común
     Usuario.UsuarioBuilder userBuilder = Usuario.builder()
@@ -75,6 +71,9 @@ public class AuthService {
       default -> throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Rol no válido");
     }
 
+    Usuario user = userBuilder.build();
+    userRepository.save(user);
+
     // 5. Generar token para auto-login inmediato al finalizar el último paso
     Map<String, Object> claims = new HashMap<>();
     claims.put("rol", user.getRole().name());
@@ -91,8 +90,6 @@ public class AuthService {
         )
     );
 
-    Usuario user = userBuilder.build();
-    usuarioRepository.save(user);
     Usuario user = userRepository.findByUsername(request.username())
         .orElseThrow(() -> new ResponseStatusException(
             HttpStatus.UNAUTHORIZED,
@@ -100,41 +97,42 @@ public class AuthService {
 
     Map<String, Object> claims = new HashMap<>();
     claims.put("rol", user.getRole().name());
-        return new AuthResponse(jwtService.generateToken(claims, user));
-    }
 
-
-    @Transactional
-    public void cambiarPassword(CambiarPasswordRequest request, Principal connectedUser) {
-        Usuario user = userRepository.findByUsername(connectedUser.getName())
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "Usuario no encontrado"
-                ));
-
-        if (!passwordEncoder.matches(request.currentPassword(), user.getPassword())) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "La contraseña actual no es correcta"
-            );
-        }
-
-        if (!request.newPassword().equals(request.confirmationPassword())) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "La nueva contraseña y su confirmación no coinciden"
-            );
-        }
-
-        if (passwordEncoder.matches(request.newPassword(), user.getPassword())) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "La nueva contraseña no puede ser igual a la actual"
-            );
-        }
-
-        user.setPassword(passwordEncoder.encode(request.newPassword()));
-        userRepository.save(user);
-    }
-
+    return new AuthResponse(jwtService.generateToken(claims, user));
   }
+
+
+  @Transactional
+  public void cambiarPassword(CambiarPasswordRequest request, Principal connectedUser) {
+    Usuario user = userRepository.findByUsername(connectedUser.getName())
+        .orElseThrow(() -> new ResponseStatusException(
+            HttpStatus.NOT_FOUND,
+            "Usuario no encontrado"
+        ));
+
+    if (!passwordEncoder.matches(request.currentPassword(), user.getPassword())) {
+      throw new ResponseStatusException(
+          HttpStatus.BAD_REQUEST,
+          "La contraseña actual no es correcta"
+      );
+    }
+
+    if (!request.newPassword().equals(request.confirmationPassword())) {
+      throw new ResponseStatusException(
+          HttpStatus.BAD_REQUEST,
+          "La nueva contraseña y su confirmación no coinciden"
+      );
+    }
+
+    if (passwordEncoder.matches(request.newPassword(), user.getPassword())) {
+      throw new ResponseStatusException(
+          HttpStatus.BAD_REQUEST,
+          "La nueva contraseña no puede ser igual a la actual"
+      );
+    }
+
+    user.setPassword(passwordEncoder.encode(request.newPassword()));
+    userRepository.save(user);
+  }
+
+}

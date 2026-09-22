@@ -32,7 +32,7 @@ public class SecurityConfig {
   private final UsuarioServiceImpl usuarioServiceImpl;
 
   //constructor
-  SecurityConfig(JwtAuthFilter jwtAuthFilter, UsuarioServiceImpl usuarioServiceImpl){
+  SecurityConfig(JwtAuthFilter jwtAuthFilter, UsuarioServiceImpl usuarioServiceImpl) {
     this.jwtAuthFilter = jwtAuthFilter;
     this.usuarioServiceImpl = usuarioServiceImpl;
   }
@@ -41,40 +41,41 @@ public class SecurityConfig {
   public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
     return http
 
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+        .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
-            .csrf(csrf -> csrf.disable())
+        .csrf(csrf -> csrf.disable())
 
-            // Configurar manejo de sesiones como STATELESS
-            .sessionManagement(session ->
-                    session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-            )
-            .securityMatcher("/api/**")
-            // Reglas de autorización
-            .authorizeHttpRequests(auth -> auth
-                    .requestMatchers("/api/v1/auth/cambiarpassword").authenticated()
-                    .requestMatchers("/api/v1/auth/**").permitAll()
-                    .requestMatchers("/api/v1/auth/login", "/api/v1/auth/register").permitAll()
-                    .anyRequest().authenticated()
-            ).authenticationProvider(authenticationProvider())
+        // Configurar manejo de sesiones como STATELESS
+        .sessionManagement(session ->
+            session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+        )
+        .securityMatcher("/api/**")
+        // Reglas de autorización
+        .authorizeHttpRequests(auth -> auth
+            .requestMatchers("/api/v1/auth/cambiarpassword").authenticated()
+            .requestMatchers("/api/v1/auth/**").permitAll()
+            .requestMatchers("/api/v1/auth/login", "/api/v1/auth/register").permitAll()
+            .anyRequest().authenticated()
+        ).authenticationProvider(authenticationProvider())
 
-            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
-            .headers(h -> h
-                    .frameOptions(frame -> frame.disable()))
-            .build();}
+        .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+        .headers(h -> h
+            .frameOptions(frame -> frame.disable()))
+        .build();
+  }
 
 
   @Bean
   AuthenticationProvider authenticationProvider() {
     DaoAuthenticationProvider provider = new
-            DaoAuthenticationProvider(usuarioServiceImpl);
+        DaoAuthenticationProvider(usuarioServiceImpl);
     provider.setPasswordEncoder(passwordEncoder());
     return provider;
   }
 
   @Bean
   public AuthenticationManager authenticationManager(
-          AuthenticationConfiguration config) throws Exception {
+      AuthenticationConfiguration config) throws Exception {
     return config.getAuthenticationManager();
   }
 
@@ -89,7 +90,7 @@ public class SecurityConfig {
 
     // Orígenes permitidos (URLs donde corre el frontend)
     configuration.setAllowedOrigins(List.of(
-            "http://localhost:4200"   // Angular
+        "http://localhost:4200"   // Angular
     ));
 
     configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
