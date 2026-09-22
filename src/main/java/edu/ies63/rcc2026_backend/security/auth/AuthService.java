@@ -1,8 +1,12 @@
 package edu.ies63.rcc2026_backend.security.auth;
 
+import edu.ies63.rcc2026_backend.dto.GrupoCreateDTO;
+import edu.ies63.rcc2026_backend.dto.OrganizadorCreateDTO;
 import edu.ies63.rcc2026_backend.dto.UsuarioCreateDTO;
 import edu.ies63.rcc2026_backend.enums.Role;
+import edu.ies63.rcc2026_backend.model.Localidad;
 import edu.ies63.rcc2026_backend.model.Usuario;
+import edu.ies63.rcc2026_backend.repository.LocalidadRepository;
 import edu.ies63.rcc2026_backend.repository.UsuarioRepository;
 import edu.ies63.rcc2026_backend.security.dto.AuthRequest;
 import edu.ies63.rcc2026_backend.security.dto.AuthResponse;
@@ -20,39 +24,19 @@ import org.springframework.web.server.ResponseStatusException;
 import java.security.Principal;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
 public class AuthService {
 
     private final UsuarioRepository userRepository;
+    private final LocalidadRepository localidadRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
 
-    public AuthResponse register(UsuarioCreateDTO request) {
-        if (userRepository.findByUsername(request.username()).isPresent()) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "El usuario ya existe: " + request.username());
-        }
-
-        Usuario user = Usuario.builder()
-                .nombre(request.nombre())
-                .username(request.username())
-                .password(passwordEncoder.encode(request.password()))
-                .role(Role.USUARIO)
-                .debaja(false)
-                .build();
-
-        userRepository.save(user);
-
-        Map<String, Object> claims = new HashMap<>();
-        claims.put("rol", user.getRole().name());
-
-        return new AuthResponse(jwtService.generateToken(claims, user));
-    }
-
-    public AuthResponse authenticate(AuthRequest request) {
+     public AuthResponse authenticate(AuthRequest request) {
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         request.username(),
@@ -65,11 +49,13 @@ public class AuthService {
                         HttpStatus.UNAUTHORIZED,
                         "Usuario no encontrado: " + request.username()));
 
-        Map<String, Object> claims = new HashMap<>();
+/*        Map<String, Object> claims = new HashMap<>();
         claims.put("rol", user.getRole().name());
 
-        return new AuthResponse(jwtService.generateToken(claims, user));
-    }
+        return new AuthResponse(jwtService.generateToken(claims, user));*/
+         return guardarYGenerarToken(user);
+
+     }
 
 
     @Transactional
@@ -103,5 +89,94 @@ public class AuthService {
 
         user.setPassword(passwordEncoder.encode(request.newPassword()));
         userRepository.save(user);
+    }
+
+    @Transactional
+    public AuthResponse registerUsuario(UsuarioCreateDTO request) {
+        validarUsernameDisponible(request.username());
+        Localidad localidad = resolverLocalidad(request.localidadId());
+
+        Usuario user = Usuario.builder()
+                .nombre(request.nombre())
+                .username(request.username())
+                .password(passwordEncoder.encode(request.password()))
+                .biografia(request.biografia())
+                .localidad(localidad)
+                .role(Role.USUARIO)          // ← rol FIJO, no viene del cliente
+                .debaja(false)
+                .build();
+
+        return guardarYGenerarToken(user);
+    }
+
+    @Transactional
+    public AuthResponse registerOrganizador(OrganizadorCreateDTO request) {
+        validarUsernameDisponible(request.username());
+
+        Localidad localidad = resolverLocalidad(request.localidadId());
+
+        Usuario user = Usuario.builder()
+                .nombre(request.nombre())
+                .username(request.username())
+                .password(passwordEncoder.encode(request.password()))
+                .biografia(request.biografia())
+                .director(request.director())
+                .localidad(localidad)
+                .role(Role.ORGANIZADOR)      // ← rol FIJO
+                .debaja(false)
+                .build();
+
+        return guardarYGenerarToken(user);
+    }
+
+    @Transactional
+    public AuthResponse registerGrupo(GrupoCreateDTO request) {
+        validarUsernameDisponible(request.username());
+
+        Localidad localidad = resolverLocalidad(request.localidadId());
+
+        Usuario user = Usuario.builder()
+                .nombre(request.nombre())
+                .username(request.username())
+                .password(passwordEncoder.encode(request.password()))
+                .biografia(request.biografia())
+                .director(request.director())
+                .localidad(localidad)
+                .role(Role.GRUPO)            // ← rol FIJO
+                .debaja(false)
+                .build();
+
+        return guardarYGenerarToken(user);
+    }
+
+    // métodos privados para reutilizar
+
+    private AuthResponse guardarYGenerarToken(Usuario user) {
+        userRepository.save(user);
+
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("rol", user.getRole().name());
+        claims.put("id", user.getId());
+        claims.put("name", user.getNombre());
+
+        return new AuthResponse(jwtService.generateToken(claims, user));
+    }
+
+    private void validarUsernameDisponible(String username) {
+        if (userRepository.findByUsername(username).isPresent()) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "El usuario ya existe: " + username
+            );
+        }
+    }
+
+    private Localidad resolverLocalidad(Long localidadId) {
+        return Optional.ofNullable(localidadId)
+                .map(id -> localidadRepository.findById(id)
+                        .orElseThrow(() -> new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "Localidad no encontrada con ID: " + id)))
+                .orElse(null);
     }
 }

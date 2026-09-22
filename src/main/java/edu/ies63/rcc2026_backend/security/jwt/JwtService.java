@@ -24,6 +24,7 @@ public class JwtService {
     // Genera un token para el usuario
     public String generateToken(Map<String, Object> extraClaims, UserDetails userDetails) {
         return Jwts.builder()
+                .claims(extraClaims)                                    // ← claims propios//
                 .subject(userDetails.getUsername())
                 .issuedAt(new Date(System.currentTimeMillis()))
                 .expiration(new Date(System.currentTimeMillis() + jwtExpiration))

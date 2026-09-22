@@ -34,7 +34,7 @@ public class UsuarioController {
   List<UsuarioResponseDTO> listaUsuarios() {
     return usuarioService.listarUsuarios();
   }
-
+/*
   @PostMapping("/registrar-usuario")
   ResponseEntity<UsuarioResponseDTO> registrarUsuario(@Valid @RequestBody
                                                       UsuarioCreateDTO usuario,
@@ -78,4 +78,5 @@ public class UsuarioController {
 
     return ResponseEntity.created(uri).body(grupoCreado);
   }
+  */
 }
