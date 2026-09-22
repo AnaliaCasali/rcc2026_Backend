@@ -1,7 +1,6 @@
 package edu.ies63.rcc2026_backend.model;
 
 import edu.ies63.rcc2026_backend.enums.Role;
-import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
