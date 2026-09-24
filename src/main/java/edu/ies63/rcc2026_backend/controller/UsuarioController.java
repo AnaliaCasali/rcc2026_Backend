@@ -1,22 +1,21 @@
 package edu.ies63.rcc2026_backend.controller;
 
-import edu.ies63.rcc2026_backend.dto.GrupoCreateDTO;
-import edu.ies63.rcc2026_backend.dto.GrupoResponseDTO;
-import edu.ies63.rcc2026_backend.dto.OrganizadorCreateDTO;
-import edu.ies63.rcc2026_backend.dto.OrganizadorResponseDTO;
-import edu.ies63.rcc2026_backend.dto.UsuarioCreateDTO;
+import edu.ies63.rcc2026_backend.dto.PerfilResponseDTO;
+import edu.ies63.rcc2026_backend.dto.PerfilUpdateDTO;
 import edu.ies63.rcc2026_backend.dto.UsuarioResponseDTO;
 import edu.ies63.rcc2026_backend.service.UsuarioService;
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.util.UriComponentsBuilder;
 
-import java.net.URI;
+import java.security.Principal;
 import java.util.List;
 
 @RestController
@@ -31,52 +30,29 @@ public class UsuarioController {
   }
 
   @GetMapping("/lista-usuarios")
-  List<UsuarioResponseDTO> listaUsuarios() {
-    return usuarioService.listarUsuarios();
-  }
-/*
-  @PostMapping("/registrar-usuario")
-  ResponseEntity<UsuarioResponseDTO> registrarUsuario(@Valid @RequestBody
-                                                      UsuarioCreateDTO usuario,
-                                                      UriComponentsBuilder uriBuilder) {
-    UsuarioResponseDTO usuarioCreado = usuarioService.crearUsuario(usuario);
-
-    URI uri = uriBuilder
-        .path("/api/v1/auth/usuarios/{id}")
-        .buildAndExpand(usuarioCreado.id())
-        .toUri();
-
-    return ResponseEntity.created(uri).body(usuarioCreado);
+  public ResponseEntity<List<UsuarioResponseDTO>> listaUsuarios() {
+    return ResponseEntity.ok(usuarioService.listarUsuarios());
   }
 
-  // Endpoint para Organizador
-  @PostMapping("/registrar-organizador")
-  public ResponseEntity<OrganizadorResponseDTO> registrarOrganizador(@Valid @RequestBody
-                                                                       OrganizadorCreateDTO organizador,
-                                                                     UriComponentsBuilder uriBuilder) {
-    OrganizadorResponseDTO orgCreado = usuarioService.crearOrganizador(organizador);
-
-    URI uri = uriBuilder
-        .path("/api/v1/auth/usuarios/{id}")
-        .buildAndExpand(orgCreado.id())
-        .toUri();
-
-    return ResponseEntity.created(uri).body(orgCreado);
+  @PutMapping(value = "/perfil", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+  @Operation(summary = "Actualizar el perfil del usuario autenticado (Soporta imágenes)")
+  public ResponseEntity<PerfilResponseDTO> actualizarPerfil(
+      @Valid @ModelAttribute PerfilUpdateDTO request,
+      Principal connectedUser
+  ) {
+    PerfilResponseDTO response = usuarioService.actualizarPerfil(connectedUser.getName(), request);
+    return ResponseEntity.ok(response);
   }
 
-  // Endpoint para Grupo
-  @PostMapping("/registrar-grupo")
-  public ResponseEntity<GrupoResponseDTO> registrarGrupo(@Valid @RequestBody
-                                                           GrupoCreateDTO grupo,
-                                                         UriComponentsBuilder uriBuilder) {
-    GrupoResponseDTO grupoCreado = usuarioService.crearGrupo(grupo);
-
-    URI uri = uriBuilder
-        .path("/api/v1/auth/usuarios/{id}")
-        .buildAndExpand(grupoCreado.id())
-        .toUri();
-
-    return ResponseEntity.created(uri).body(grupoCreado);
+  @GetMapping("/perfil/mi-perfil")
+  @Operation(summary = "Obtener los datos completos de mi perfil autenticado")
+  public ResponseEntity<PerfilResponseDTO> obtenerMiPerfil(Principal connectedUser) {
+    return ResponseEntity.ok(usuarioService.obtenerMiPerfil(connectedUser.getName()));
   }
-  */
+
+  @GetMapping("/{id}/perfil")
+  @Operation(summary = "Ver el perfil público de otro usuario o agrupación")
+  public ResponseEntity<PerfilResponseDTO> verPerfilPublico(@PathVariable Long id) {
+    return ResponseEntity.ok(usuarioService.verPerfilPublico(id));
+  }
 }
