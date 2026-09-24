@@ -4,6 +4,7 @@ import edu.ies63.rcc2026_backend.security.jwt.JwtAuthFilter;
 import edu.ies63.rcc2026_backend.service.impl.UsuarioServiceImpl;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -52,10 +53,21 @@ public class SecurityConfig {
             .securityMatcher("/api/**")
             // Reglas de autorización
             .authorizeHttpRequests(auth -> auth
-                    .requestMatchers("/api/v1/auth/cambiarpassword").authenticated()
-                    .requestMatchers("/api/v1/auth/**").permitAll()
-                    .requestMatchers("/api/v1/auth/login", "/api/v1/auth/register").permitAll()
-                    .anyRequest().authenticated()
+                .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()
+                .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+
+                .requestMatchers("/api/v1/auth/login").permitAll()
+                .requestMatchers("/api/v1/auth/register/**").permitAll()
+
+                .requestMatchers(HttpMethod.GET, "/api/v1/auth/usuarios/{id}/perfil").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/auth/usuarios/lista-usuarios").permitAll()
+
+                .requestMatchers("/api/v1/auth/cambiarpassword").authenticated()
+                .requestMatchers("/api/v1/auth/usuarios/perfil/mi-perfil").authenticated()
+                .requestMatchers(HttpMethod.PUT, "/api/v1/auth/usuarios/perfil").authenticated()
+
+                .requestMatchers("/api/**").authenticated()
+                .anyRequest().authenticated()
             ).authenticationProvider(authenticationProvider())
 
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
