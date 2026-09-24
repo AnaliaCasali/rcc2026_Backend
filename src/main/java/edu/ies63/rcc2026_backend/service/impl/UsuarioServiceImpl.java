@@ -1,27 +1,42 @@
 package edu.ies63.rcc2026_backend.service.impl;
 
-import edu.ies63.rcc2026_backend.dto.GrupoCreateDTO;
-import edu.ies63.rcc2026_backend.dto.GrupoResponseDTO;
-import edu.ies63.rcc2026_backend.dto.OrganizadorCreateDTO;
-import edu.ies63.rcc2026_backend.dto.OrganizadorResponseDTO;
-import edu.ies63.rcc2026_backend.dto.UsuarioCreateDTO;
+import edu.ies63.rcc2026_backend.dto.ImagenPerfilResponseDTO;
+import edu.ies63.rcc2026_backend.dto.PerfilResponseDTO;
+import edu.ies63.rcc2026_backend.dto.PerfilUpdateDTO;
+import edu.ies63.rcc2026_backend.dto.RedSocialResponseDTO;
 import edu.ies63.rcc2026_backend.dto.UsuarioResponseDTO;
-import edu.ies63.rcc2026_backend.enums.Role;
+import edu.ies63.rcc2026_backend.enums.Plataforma;
+import edu.ies63.rcc2026_backend.enums.TipoImagen;
+import edu.ies63.rcc2026_backend.model.ImagenPerfil;
+import edu.ies63.rcc2026_backend.model.RedSocial;
 import edu.ies63.rcc2026_backend.model.Usuario;
 import edu.ies63.rcc2026_backend.repository.UsuarioRepository;
 import edu.ies63.rcc2026_backend.service.UsuarioService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @Slf4j
 public class UsuarioServiceImpl implements UsuarioService, UserDetailsService {
   private final UsuarioRepository usuarioRepository;
+  private final String UPLOAD_DIR = "uploads/perfiles/";
+  private static final List<String> TIPOS_PERMITIDOS = List.of("image/jpeg", "image/png", "image/webp");
 
   public UsuarioServiceImpl(UsuarioRepository usuarioRepository) {
     this.usuarioRepository = usuarioRepository;
@@ -46,75 +61,187 @@ public class UsuarioServiceImpl implements UsuarioService, UserDetailsService {
             .toList();
     return lista;
   }
-/*
-  @Override
-  public UsuarioResponseDTO crearUsuario(UsuarioCreateDTO usuario) {
-    Usuario usuarioEntity = new Usuario();
 
-    usuarioEntity.setNombre(usuario.nombre());
-    usuarioEntity.setUsername(usuario.username());
-    usuarioEntity.setPassword(usuario.password());
-    usuarioEntity.setRole(Role.USUARIO);
-    usuarioEntity.setBiografia(usuario.biografia());
-    usuarioEntity.setDebaja(false);
+  // para editar perfil
+  @Transactional
+  public PerfilResponseDTO actualizarPerfil(String username, PerfilUpdateDTO request) {
+    Usuario user = usuarioRepository.findByUsername(username)
+        .orElseThrow(() -> new ResponseStatusException(
+            HttpStatus.NOT_FOUND,
+            "Usuario no encontrado"
+        ));
 
-    Usuario usuarioGuardado = usuarioRepository.save(usuarioEntity);
-    return new UsuarioResponseDTO(
-        usuarioGuardado.getId(),
-        usuarioGuardado.getUsername(),
-        usuarioGuardado.getRole(),
-        usuarioGuardado.getNombre(),
-        usuarioGuardado.getBiografia());
+    // 1. Actualizar datos de texto básicos
+    if (request.nombre() != null) user.setNombre(request.nombre());
+    if (request.biografia() != null) user.setBiografia(request.biografia());
+    if (request.director() != null) user.setDirector(request.director());
+    if (request.whatsapp() != null) user.setWhatsapp(request.whatsapp());
+
+    // 2. Actualizar Redes Sociales (llama al método que ya implementaste)
+    actualizarRedes(user, request);
+
+    // 3. Actualizar Imágenes
+    if (user.getImagenesPerfil() == null) {
+      user.setImagenesPerfil(new ArrayList<>());
+    }
+
+    if (request.fotoPerfil() != null && !request.fotoPerfil().isEmpty()) {
+      String url = guardarArchivoLocalmente(request.fotoPerfil());
+      actualizarEntidadImagen(user, url, TipoImagen.FOTOPERFIL);
+    }
+
+    if (request.fotoBanner() != null && !request.fotoBanner().isEmpty()) {
+      String url = guardarArchivoLocalmente(request.fotoBanner());
+      actualizarEntidadImagen(user, url, TipoImagen.PORTADA);
+    }
+
+    // 4. Guardar en base de datos
+    Usuario usuarioGuardado = usuarioRepository.save(user);
+
+    // 5. Devolver el DTO completo para que el Frontend lo renderice
+    return mapearAPerfilResponseDTO(usuarioGuardado);
+  }
+
+  // para agregar y actualizar redes sociales
+  private void actualizarRedes(Usuario user, PerfilUpdateDTO request) {
+    if (user.getRedes() == null) {
+      user.setRedes(new ArrayList<>());
+    }
+    user.getRedes().clear();
+
+    agregarRedSiValida(user, Plataforma.INSTAGRAM, request.instagram());
+    agregarRedSiValida(user, Plataforma.FACEBOOK, request.facebook());
+    agregarRedSiValida(user, Plataforma.X, request.x());
+  }
+
+  private void agregarRedSiValida(Usuario user, Plataforma plataforma, String input) {
+    if (input != null && !input.isBlank()) {
+      RedSocial red = convertirLinkRedSocial(plataforma, input, user);
+      user.getRedes().add(red);
+    }
+  }
+
+  // para conversion de link de red social
+  private RedSocial convertirLinkRedSocial(Plataforma plataforma, String entrada, Usuario usuario) {
+    String limpio = entrada.trim()
+        .replaceAll("^https?://(www\\.)?", "")
+        .replaceAll("/$", "");
+
+    String nombreUsuario;
+    String url;
+
+    switch (plataforma) {
+      case INSTAGRAM -> {
+        nombreUsuario = limpio.replaceFirst("^(instagram\\.com/|@)", "");
+        url = "https://www.instagram.com/" + nombreUsuario;
+      }
+      case FACEBOOK -> {
+        nombreUsuario = limpio.replaceFirst("^(facebook\\.com/|@)", "");
+        url = "https://www.facebook.com/" + nombreUsuario;
+      }
+      case X -> {
+        nombreUsuario = limpio.replaceFirst("^(x\\.com/|twitter\\.com/|@)", "");
+        url = "https://x.com/" + nombreUsuario;
+      }
+      default -> {
+        nombreUsuario = limpio;
+        url = entrada.startsWith("http") ? entrada : "https://" + entrada;
+      }
+    }
+
+    return RedSocial.builder()
+        .plataforma(plataforma)
+        .nombreUsuario("@" + nombreUsuario)
+        .url(url)
+        .usuario(usuario)
+        .build();
+  }
+
+  // para agregar imágenes
+  private void actualizarEntidadImagen(Usuario user, String url, TipoImagen tipo) {
+    user.getImagenesPerfil().removeIf(img -> img.getTipoImagen() == tipo);
+    user.getImagenesPerfil().add(ImagenPerfil.builder()
+        .url(url)
+        .tipoImagen(tipo)
+        .usuario(user)
+        .alt("Imagen " + tipo.name() + " de " + user.getNombre())
+        .build());
+  }
+
+  private String guardarArchivoLocalmente(MultipartFile file) {
+    try {
+      Path rutaDirectorio = Paths.get(UPLOAD_DIR);
+      if (!Files.exists(rutaDirectorio)) {
+        Files.createDirectories(rutaDirectorio);
+      }
+
+      // Reemplaza espacios por guiones bajos para evitar problemas en URLs
+      String nombreOriginal = file.getOriginalFilename() != null ?
+          file.getOriginalFilename().replaceAll("\\s+", "_") :
+          "imagen.jpg";
+
+      String nombreArchivo = UUID.randomUUID().toString() + "_" + nombreOriginal;
+      Path rutaArchivo = rutaDirectorio.resolve(nombreArchivo);
+
+      Files.copy(file.getInputStream(), rutaArchivo, StandardCopyOption.REPLACE_EXISTING);
+
+      return "/uploads/perfiles/" + nombreArchivo;
+    } catch (IOException e) {
+      throw new ResponseStatusException(
+          HttpStatus.INTERNAL_SERVER_ERROR,
+          "Error al guardar la imagen"
+      );
+    }
+  }
+
+  public PerfilResponseDTO mapearAPerfilResponseDTO(Usuario u) {
+    Long localidadId = u.getLocalidad() != null ? u.getLocalidad().getId() : null;
+    String localidadStr = u.getLocalidad() != null
+        ? u.getLocalidad().getLocalidad() + ", " + u.getLocalidad().getProvincia()
+        : "";
+
+    List<ImagenPerfilResponseDTO> imagenesDto = u.getImagenesPerfil() != null
+        ? u.getImagenesPerfil().stream()
+        .map(img -> new ImagenPerfilResponseDTO(
+            img.getId(), img.getUrl(), img.getAlt(), img.getTipoImagen()
+        )).toList()
+        : new ArrayList<>();
+
+    List<RedSocialResponseDTO> redesDto = u.getRedes() != null
+        ? u.getRedes().stream()
+        .map(red -> new RedSocialResponseDTO(
+            red.getId(), red.getPlataforma(), red.getUrl(), red.getNombreUsuario()
+        )).toList()
+        : new ArrayList<>();
+
+    return new PerfilResponseDTO(
+        u.getId(), u.getUsername(), u.getRole(), u.getNombre(),
+        u.getBiografia(), u.getDirector(),
+        localidadId,    // <--- Faltaba pasar este parámetro al constructor
+        localidadStr,
+        u.getWhatsapp(),
+        imagenesDto, redesDto
+    );
   }
 
   @Override
-  public OrganizadorResponseDTO crearOrganizador(OrganizadorCreateDTO organizador) {
-    Usuario orgEntity = new Usuario();
-
-    orgEntity.setNombre(organizador.nombre());
-    orgEntity.setUsername(organizador.username());
-    orgEntity.setPassword(organizador.password());
-    orgEntity.setRole(Role.ORGANIZADOR);
-    orgEntity.setBiografia(organizador.biografia());
-    orgEntity.setDebaja(false);
-
-    Usuario organizadorGuardado = usuarioRepository.save(orgEntity);
-    return new OrganizadorResponseDTO(
-        organizadorGuardado.getId(),
-        organizadorGuardado.getUsername(),
-        organizadorGuardado.getRole(),
-        organizadorGuardado.getNombre(),
-        organizadorGuardado.getBiografia(),
-        organizadorGuardado.getDirector(),
-        organizadorGuardado.getLocalidad());
+  public PerfilResponseDTO obtenerMiPerfil(String username) {
+    Usuario me = usuarioRepository.findByUsername(username)
+        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado: " + username));
+    return mapearAPerfilResponseDTO(me);
   }
 
   @Override
-  public GrupoResponseDTO crearGrupo(GrupoCreateDTO grupo) {
-    Usuario grupoEntity = new Usuario();
-
-    grupoEntity.setNombre(grupo.nombre());
-    grupoEntity.setUsername(grupo.username());
-    grupoEntity.setPassword(grupo.password());
-    grupoEntity.setRole(Role.GRUPO);
-    grupoEntity.setBiografia(grupo.biografia());
-    grupoEntity.setDebaja(false);
-
-    Usuario grupoGuardado = usuarioRepository.save(grupoEntity);
-    return new GrupoResponseDTO(
-        grupoGuardado.getId(),
-        grupoGuardado.getUsername(),
-        grupoGuardado.getRole(),
-        grupoGuardado.getNombre(),
-        grupoGuardado.getBiografia(),
-        grupoGuardado.getDirector(),
-        grupoGuardado.getLocalidad());
+  public PerfilResponseDTO verPerfilPublico(Long id) {
+    Usuario usuario = usuarioRepository.findById(id)
+        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado con ID: " + id));
+    return mapearAPerfilResponseDTO(usuario);
   }
-*/
 
   @Override
   public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
     return usuarioRepository.findByUsername(username)
-            .orElseThrow(() ->
-                    new UsernameNotFoundException("Usuario no encontrado: " + username));
-  }}
+        .orElseThrow(() ->
+            new UsernameNotFoundException("Usuario no encontrado: " + username));
+  }
+}
