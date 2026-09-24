@@ -11,6 +11,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.Email;
 import lombok.AllArgsConstructor;
@@ -65,6 +66,18 @@ public class Usuario implements UserDetails {
 
     // en vez de eliminar la cuenta, estado de cuenta
     private boolean debaja = false;
+
+    @Column(name = "whatsapp", length = 20)
+    private String whatsapp;
+
+    // agregar entidad imagen y llamar por id (para editar perfil)
+    @OneToMany(mappedBy = "usuario", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ImagenPerfil> imagenesPerfil;
+
+    @OneToMany(mappedBy = "usuario", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<RedSocial> redes;
+
+
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

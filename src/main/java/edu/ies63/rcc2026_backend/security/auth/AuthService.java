@@ -30,153 +30,154 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class AuthService {
 
-    private final UsuarioRepository userRepository;
-    private final LocalidadRepository localidadRepository;
-    private final PasswordEncoder passwordEncoder;
-    private final JwtService jwtService;
-    private final AuthenticationManager authenticationManager;
+  private final UsuarioRepository userRepository;
+  private final LocalidadRepository localidadRepository;
+  private final PasswordEncoder passwordEncoder;
+  private final JwtService jwtService;
+  private final AuthenticationManager authenticationManager;
 
-     public AuthResponse authenticate(AuthRequest request) {
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        request.username(),
-                        request.password()
-                )
-        );
 
-        Usuario user = userRepository.findByUsername(request.username())
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.UNAUTHORIZED,
-                        "Usuario no encontrado: " + request.username()));
+  public AuthResponse authenticate(AuthRequest request) {
+    authenticationManager.authenticate(
+        new UsernamePasswordAuthenticationToken(
+            request.username(),
+            request.password()
+        )
+    );
+
+    Usuario user = userRepository.findByUsername(request.username())
+        .orElseThrow(() -> new ResponseStatusException(
+            HttpStatus.UNAUTHORIZED,
+            "Usuario no encontrado: " + request.username()));
 
 /*        Map<String, Object> claims = new HashMap<>();
         claims.put("rol", user.getRole().name());
 
         return new AuthResponse(jwtService.generateToken(claims, user));*/
-         return guardarYGenerarToken(user);
+    return guardarYGenerarToken(user);
 
-     }
+  }
 
 
-    @Transactional
-    public void cambiarPassword(CambiarPasswordRequest request, Principal connectedUser) {
-        Usuario user = userRepository.findByUsername(connectedUser.getName())
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "Usuario no encontrado"
-                ));
+  @Transactional
+  public void cambiarPassword(CambiarPasswordRequest request, Principal connectedUser) {
+    Usuario user = userRepository.findByUsername(connectedUser.getName())
+        .orElseThrow(() -> new ResponseStatusException(
+            HttpStatus.NOT_FOUND,
+            "Usuario no encontrado"
+        ));
 
-        if (!passwordEncoder.matches(request.currentPassword(), user.getPassword())) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "La contraseña actual no es correcta"
-            );
-        }
-
-        if (!request.newPassword().equals(request.confirmationPassword())) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "La nueva contraseña y su confirmación no coinciden"
-            );
-        }
-
-        if (passwordEncoder.matches(request.newPassword(), user.getPassword())) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "La nueva contraseña no puede ser igual a la actual"
-            );
-        }
-
-        user.setPassword(passwordEncoder.encode(request.newPassword()));
-        userRepository.save(user);
+    if (!passwordEncoder.matches(request.currentPassword(), user.getPassword())) {
+      throw new ResponseStatusException(
+          HttpStatus.BAD_REQUEST,
+          "La contraseña actual no es correcta"
+      );
     }
 
-    @Transactional
-    public AuthResponse registerUsuario(UsuarioCreateDTO request) {
-        validarUsernameDisponible(request.username());
-        Localidad localidad = resolverLocalidad(request.localidadId());
-
-        Usuario user = Usuario.builder()
-                .nombre(request.nombre())
-                .username(request.username())
-                .password(passwordEncoder.encode(request.password()))
-                .biografia(request.biografia())
-                .localidad(localidad)
-                .role(Role.USUARIO)          // ← rol FIJO, no viene del cliente
-                .debaja(false)
-                .build();
-
-        return guardarYGenerarToken(user);
+    if (!request.newPassword().equals(request.confirmationPassword())) {
+      throw new ResponseStatusException(
+          HttpStatus.BAD_REQUEST,
+          "La nueva contraseña y su confirmación no coinciden"
+      );
     }
 
-    @Transactional
-    public AuthResponse registerOrganizador(OrganizadorCreateDTO request) {
-        validarUsernameDisponible(request.username());
-
-        Localidad localidad = resolverLocalidad(request.localidadId());
-
-        Usuario user = Usuario.builder()
-                .nombre(request.nombre())
-                .username(request.username())
-                .password(passwordEncoder.encode(request.password()))
-                .biografia(request.biografia())
-                .director(request.director())
-                .localidad(localidad)
-                .role(Role.ORGANIZADOR)      // ← rol FIJO
-                .debaja(false)
-                .build();
-
-        return guardarYGenerarToken(user);
+    if (passwordEncoder.matches(request.newPassword(), user.getPassword())) {
+      throw new ResponseStatusException(
+          HttpStatus.BAD_REQUEST,
+          "La nueva contraseña no puede ser igual a la actual"
+      );
     }
 
-    @Transactional
-    public AuthResponse registerGrupo(GrupoCreateDTO request) {
-        validarUsernameDisponible(request.username());
+    user.setPassword(passwordEncoder.encode(request.newPassword()));
+    userRepository.save(user);
+  }
 
-        Localidad localidad = resolverLocalidad(request.localidadId());
+  @Transactional
+  public AuthResponse registerUsuario(UsuarioCreateDTO request) {
+    validarUsernameDisponible(request.username());
+    Localidad localidad = resolverLocalidad(request.localidadId());
 
-        Usuario user = Usuario.builder()
-                .nombre(request.nombre())
-                .username(request.username())
-                .password(passwordEncoder.encode(request.password()))
-                .biografia(request.biografia())
-                .director(request.director())
-                .localidad(localidad)
-                .role(Role.GRUPO)            // ← rol FIJO
-                .debaja(false)
-                .build();
+    Usuario user = Usuario.builder()
+        .nombre(request.nombre())
+        .username(request.username())
+        .password(passwordEncoder.encode(request.password()))
+        .biografia(request.biografia())
+        .localidad(localidad)
+        .role(Role.USUARIO)          // ← rol FIJO, no viene del cliente
+        .debaja(false)
+        .build();
 
-        return guardarYGenerarToken(user);
+    return guardarYGenerarToken(user);
+  }
+
+  @Transactional
+  public AuthResponse registerOrganizador(OrganizadorCreateDTO request) {
+    validarUsernameDisponible(request.username());
+
+    Localidad localidad = resolverLocalidad(request.localidadId());
+
+    Usuario user = Usuario.builder()
+        .nombre(request.nombre())
+        .username(request.username())
+        .password(passwordEncoder.encode(request.password()))
+        .biografia(request.biografia())
+        .director(request.director())
+        .localidad(localidad)
+        .role(Role.ORGANIZADOR)      // ← rol FIJO
+        .debaja(false)
+        .build();
+
+    return guardarYGenerarToken(user);
+  }
+
+  @Transactional
+  public AuthResponse registerGrupo(GrupoCreateDTO request) {
+    validarUsernameDisponible(request.username());
+
+    Localidad localidad = resolverLocalidad(request.localidadId());
+
+    Usuario user = Usuario.builder()
+        .nombre(request.nombre())
+        .username(request.username())
+        .password(passwordEncoder.encode(request.password()))
+        .biografia(request.biografia())
+        .director(request.director())
+        .localidad(localidad)
+        .role(Role.GRUPO)            // ← rol FIJO
+        .debaja(false)
+        .build();
+
+    return guardarYGenerarToken(user);
+  }
+
+  // métodos privados para reutilizar
+
+  private AuthResponse guardarYGenerarToken(Usuario user) {
+    userRepository.save(user);
+
+    Map<String, Object> claims = new HashMap<>();
+    claims.put("rol", user.getRole().name());
+    claims.put("id", user.getId());
+    claims.put("name", user.getNombre());
+
+    return new AuthResponse(jwtService.generateToken(claims, user));
+  }
+
+  private void validarUsernameDisponible(String username) {
+    if (userRepository.findByUsername(username).isPresent()) {
+      throw new ResponseStatusException(
+          HttpStatus.CONFLICT,
+          "El usuario ya existe: " + username
+      );
     }
+  }
 
-    // métodos privados para reutilizar
-
-    private AuthResponse guardarYGenerarToken(Usuario user) {
-        userRepository.save(user);
-
-        Map<String, Object> claims = new HashMap<>();
-        claims.put("rol", user.getRole().name());
-        claims.put("id", user.getId());
-        claims.put("name", user.getNombre());
-
-        return new AuthResponse(jwtService.generateToken(claims, user));
-    }
-
-    private void validarUsernameDisponible(String username) {
-        if (userRepository.findByUsername(username).isPresent()) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "El usuario ya existe: " + username
-            );
-        }
-    }
-
-    private Localidad resolverLocalidad(Long localidadId) {
-        return Optional.ofNullable(localidadId)
-                .map(id -> localidadRepository.findById(id)
-                        .orElseThrow(() -> new ResponseStatusException(
-                                HttpStatus.NOT_FOUND,
-                                "Localidad no encontrada con ID: " + id)))
-                .orElse(null);
-    }
+  private Localidad resolverLocalidad(Long localidadId) {
+    return Optional.ofNullable(localidadId)
+        .map(id -> localidadRepository.findById(id)
+            .orElseThrow(() -> new ResponseStatusException(
+                HttpStatus.NOT_FOUND,
+                "Localidad no encontrada con ID: " + id)))
+        .orElse(null);
+  }
 }
