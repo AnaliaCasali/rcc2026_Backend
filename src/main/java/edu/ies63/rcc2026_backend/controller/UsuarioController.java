@@ -6,6 +6,9 @@ import edu.ies63.rcc2026_backend.dto.UsuarioResponseDTO;
 import edu.ies63.rcc2026_backend.service.UsuarioService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,7 +19,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.security.Principal;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/auth/usuarios")
@@ -29,9 +31,11 @@ public class UsuarioController {
     this.usuarioService = usuarioService;
   }
 
+  // cambiar size y sort a preferencia de pantalla sugerencias
   @GetMapping("/lista-usuarios")
-  public ResponseEntity<List<UsuarioResponseDTO>> listaUsuarios() {
-    return ResponseEntity.ok(usuarioService.listarUsuarios());
+  public ResponseEntity<Page<UsuarioResponseDTO>> listaUsuarios(
+      @PageableDefault(size = 4, sort = "nombre") Pageable pageable) {
+    return ResponseEntity.ok(usuarioService.listarUsuarios(pageable));
   }
 
   @PutMapping(value = "/perfil", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

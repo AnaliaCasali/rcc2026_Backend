@@ -4,6 +4,8 @@ import edu.ies63.rcc2026_backend.dto.GrupoCreateDTO;
 import edu.ies63.rcc2026_backend.dto.OrganizadorCreateDTO;
 import edu.ies63.rcc2026_backend.dto.UsuarioCreateDTO;
 import edu.ies63.rcc2026_backend.enums.Role;
+import edu.ies63.rcc2026_backend.exception.EmailYaRegistradoException;
+import edu.ies63.rcc2026_backend.exception.PasswordInvalidaException;
 import edu.ies63.rcc2026_backend.model.Localidad;
 import edu.ies63.rcc2026_backend.model.Usuario;
 import edu.ies63.rcc2026_backend.repository.LocalidadRepository;
@@ -68,24 +70,13 @@ public class AuthService {
         ));
 
     if (!passwordEncoder.matches(request.currentPassword(), user.getPassword())) {
-      throw new ResponseStatusException(
-          HttpStatus.BAD_REQUEST,
-          "La contraseña actual no es correcta"
-      );
+      throw new PasswordInvalidaException("La contraseña actual no es correcta");
     }
-
     if (!request.newPassword().equals(request.confirmationPassword())) {
-      throw new ResponseStatusException(
-          HttpStatus.BAD_REQUEST,
-          "La nueva contraseña y su confirmación no coinciden"
-      );
+      throw new PasswordInvalidaException("La nueva contraseña y su confirmación no coinciden");
     }
-
     if (passwordEncoder.matches(request.newPassword(), user.getPassword())) {
-      throw new ResponseStatusException(
-          HttpStatus.BAD_REQUEST,
-          "La nueva contraseña no puede ser igual a la actual"
-      );
+      throw new PasswordInvalidaException("La nueva contraseña no puede ser igual a la actual");
     }
 
     user.setPassword(passwordEncoder.encode(request.newPassword()));
@@ -165,10 +156,7 @@ public class AuthService {
 
   private void validarUsernameDisponible(String username) {
     if (userRepository.findByUsername(username).isPresent()) {
-      throw new ResponseStatusException(
-          HttpStatus.CONFLICT,
-          "El usuario ya existe: " + username
-      );
+      throw new EmailYaRegistradoException("El usuario ya existe: " + username);
     }
   }
 
