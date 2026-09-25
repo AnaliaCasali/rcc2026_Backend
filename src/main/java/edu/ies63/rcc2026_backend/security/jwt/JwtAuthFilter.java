@@ -42,7 +42,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             "/api/v1/auth/register",
             "/swagger-ui/**",
             "/v3/api-docs/**",
-            "/actuator/health"
+            "/actuator/health",
+            "/api/v1/auth/forgot-password",
+            "/api/v1/auth/reset-password"
     );
 
     // Spring Security 7: shouldNotFilter reemplaza la lógica manual de whitelist

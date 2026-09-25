@@ -5,13 +5,14 @@ import edu.ies63.rcc2026_backend.dto.OrganizadorCreateDTO;
 import edu.ies63.rcc2026_backend.dto.UsuarioCreateDTO;
 import edu.ies63.rcc2026_backend.enums.Role;
 import edu.ies63.rcc2026_backend.model.Localidad;
+import edu.ies63.rcc2026_backend.model.PasswordResetToken;
 import edu.ies63.rcc2026_backend.model.Usuario;
 import edu.ies63.rcc2026_backend.repository.LocalidadRepository;
+import edu.ies63.rcc2026_backend.repository.ResetPasswordRepository;
 import edu.ies63.rcc2026_backend.repository.UsuarioRepository;
-import edu.ies63.rcc2026_backend.security.dto.AuthRequest;
-import edu.ies63.rcc2026_backend.security.dto.AuthResponse;
-import edu.ies63.rcc2026_backend.security.dto.CambiarPasswordRequest;
+import edu.ies63.rcc2026_backend.security.dto.*;
 import edu.ies63.rcc2026_backend.security.jwt.JwtService;
+import edu.ies63.rcc2026_backend.service.EmailService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -22,9 +23,11 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.security.Principal;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -35,6 +38,8 @@ public class AuthService {
   private final PasswordEncoder passwordEncoder;
   private final JwtService jwtService;
   private final AuthenticationManager authenticationManager;
+  private final ResetPasswordRepository resetTokenRepository;
+  private final EmailService emailService;
 
 
   public AuthResponse authenticate(AuthRequest request) {
@@ -179,5 +184,55 @@ public class AuthService {
                 HttpStatus.NOT_FOUND,
                 "Localidad no encontrada con ID: " + id)))
         .orElse(null);
+  }
+
+  @Transactional
+  public void requestPasswordReset(OlvidePasswordRequest request) {
+    Usuario user = userRepository.findByUsername(request.email())
+            .or(() -> userRepository.findByUsername(request.email()))
+            .orElse(null);
+
+    if (user == null) {
+      return;
+    }
+
+    // 1. Limpiar tokens anteriores asignados a este usuario
+    resetTokenRepository.deleteByUsuario(user);
+
+    // 2. Generar token único con expiración de 15 minutos
+    String token = UUID.randomUUID().toString();
+    PasswordResetToken resetToken = PasswordResetToken.builder()
+            .token(token)
+            .usuario(user)
+            .expiryDate(LocalDateTime.now().plusMinutes(15))
+            .build();
+
+    resetTokenRepository.save(resetToken);
+
+    // 3. Enviar correo electrónico
+    emailService.sendPasswordResetEmail(user.getUsername(), token);
+  }
+
+  @Transactional
+  public void resetPassword(ResetPasswordRequest request) {
+    if (!request.newPassword().equals(request.confirmationPassword())) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Las contraseñas no coinciden");
+    }
+
+    PasswordResetToken resetToken = resetTokenRepository.findByToken(request.token())
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Token de recuperación inválido o inexistente"));
+
+    if (resetToken.isExpired()) {
+      resetTokenRepository.delete(resetToken);
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El token de recuperación ha expirado");
+    }
+
+    // Actualizar contraseña con hash BCrypt
+    Usuario user = resetToken.getUsuario();
+    user.setPassword(passwordEncoder.encode(request.newPassword()));
+    userRepository.save(user);
+
+    // Eliminar token para que no pueda reutilizarse
+    resetTokenRepository.delete(resetToken);
   }
 }

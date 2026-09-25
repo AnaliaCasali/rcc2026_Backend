@@ -1,9 +1,7 @@
 package edu.ies63.rcc2026_backend.security.auth;
 
 import edu.ies63.rcc2026_backend.dto.*;
-import edu.ies63.rcc2026_backend.security.dto.AuthRequest;
-import edu.ies63.rcc2026_backend.security.dto.AuthResponse;
-import edu.ies63.rcc2026_backend.security.dto.CambiarPasswordRequest;
+import edu.ies63.rcc2026_backend.security.dto.*;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 
@@ -74,5 +72,17 @@ public class AuthController {
     return ResponseEntity
         .status(HttpStatus.CREATED)
         .body(authService.registerGrupo(request));
+  }
+
+  @PostMapping("/forgot-password")
+  public ResponseEntity<Void> forgotPassword(@Valid @RequestBody OlvidePasswordRequest request) {
+    authService.requestPasswordReset(request);
+    return ResponseEntity.ok().build();
+  }
+
+  @PostMapping("/reset-password")
+  public ResponseEntity<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+    authService.resetPassword(request);
+    return ResponseEntity.ok().build();
   }
 }
