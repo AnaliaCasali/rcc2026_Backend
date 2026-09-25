@@ -38,7 +38,7 @@ import java.util.UUID;
 @Slf4j
 public class UsuarioServiceImpl implements UsuarioService, UserDetailsService {
   private final UsuarioRepository usuarioRepository;
-  private final String UPLOAD_DIR = "/uploads/perfiles/";
+  private final String UPLOAD_DIR = "uploads/perfiles/";
   private static final List<String> TIPOS_PERMITIDOS = List.of("image/jpeg", "image/png", "image/webp");
 
   public UsuarioServiceImpl(UsuarioRepository usuarioRepository) {
@@ -181,32 +181,36 @@ public class UsuarioServiceImpl implements UsuarioService, UserDetailsService {
   }
 
   private String guardarArchivoLocalmente(MultipartFile file, TipoImagen tipo) {
+    if (file.getContentType() == null || !TIPOS_PERMITIDOS.contains(file.getContentType())) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Formato de imagen no soportado. Usa JPG, PNG o WEBP.");
+    }
+
     try {
       Path rutaDirectorio = Paths.get(UPLOAD_DIR);
       if (!Files.exists(rutaDirectorio)) {
         Files.createDirectories(rutaDirectorio);
       }
 
-      // 1. Extraer nombre y forzar la extensión a .webp
-      String nombreOriginal = file.getOriginalFilename() != null ? file.getOriginalFilename() : "imagen";
-      String nombreSinExtension = nombreOriginal.contains(".")
-          ? nombreOriginal.substring(0, nombreOriginal.lastIndexOf('.'))
-          : nombreOriginal;
-      String nombreLimpio = nombreSinExtension.replaceAll("\\s+", "_");
+      // EXTRACCIÓN Y LIMPIEZA SEGURA DEL NOMBRE
+      String originalFilename = file.getOriginalFilename() != null ? file.getOriginalFilename() : "imagen";
+      originalFilename = Paths.get(originalFilename).getFileName().toString();
+
+      String nombreSinExtension = originalFilename.contains(".")
+          ? originalFilename.substring(0, originalFilename.lastIndexOf('.'))
+          : originalFilename;
+      String nombreLimpio = nombreSinExtension.replaceAll("[^a-zA-Z0-9\\-_]", "_");
 
       String nombreArchivo = UUID.randomUUID().toString() + "_" + nombreLimpio + ".webp";
       Path rutaArchivo = rutaDirectorio.resolve(nombreArchivo);
 
-      // 2. Definir límites de tamaño según si es Perfil o Banner
-      // El perfil suele ser cuadrado y pequeño, el banner horizontal y más grande.
       int maxWidth = (tipo == TipoImagen.FOTOPERFIL) ? 400 : 1200;
       int maxHeight = (tipo == TipoImagen.FOTOPERFIL) ? 400 : 600;
 
-      // 3. Convertir, redimensionar y guardar usando Thumbnailator
+      // PROCESAMIENTO CON THUMBNAILATOR
       Thumbnails.of(file.getInputStream())
-          .size(maxWidth, maxHeight) // Escala la imagen para que encaje en estas dimensiones sin deformarse
-          .outputFormat("webp")      // Gracias a webp-imageio, esto convierte PNG/JPG a WebP
-          .outputQuality(0.8)        // Calidad al 80% (excelente balance entre peso y nitidez)
+          .size(maxWidth, maxHeight)
+          .outputFormat("webp")
+          .outputQuality(0.8)
           .toFile(rutaArchivo.toFile());
 
       return "/uploads/perfiles/" + nombreArchivo;
