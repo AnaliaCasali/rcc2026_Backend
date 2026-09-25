@@ -40,24 +40,24 @@ public class GlobalExceptionHandler {
   public ResponseEntity<Map<String, Object>> handleResponseStatusException(ResponseStatusException ex) {
     return buildResponse(HttpStatus.valueOf(ex.getStatusCode().value()), ex.getReason(), null);
   }
-
-  // Manejo genérico para cualquier otro error (500)
-  @ExceptionHandler(Exception.class)
-  public ResponseEntity<Map<String, Object>> handleGenericException(Exception ex) {
-    return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Error interno del servidor", ex.getMessage());
+  @ExceptionHandler(UsuarioNoEncontradoException.class)
+  public ResponseEntity<Map<String, Object>> handleUsuarioNoEncontrado(UsuarioNoEncontradoException ex) {
+    return buildResponse(HttpStatus.NOT_FOUND, ex.getMessage(), null);
   }
 
-  // Método auxiliar para estructurar la respuesta del error
-  private ResponseEntity<Map<String, Object>> buildResponse(HttpStatus status, String message, Object details) {
-    Map<String, Object> response = new HashMap<>();
-    response.put("timestamp", LocalDateTime.now());
-    response.put("status", status.value());
-    response.put("error", status.getReasonPhrase());
-    response.put("message", message);
-    if (details != null) {
-      response.put("details", details);
-    }
-    return new ResponseEntity<>(response, status);
+  @ExceptionHandler(GrupoNoEncontradoException.class)
+  public ResponseEntity<Map<String, Object>> handleGrupoNoEncontrado(GrupoNoEncontradoException ex) {
+    return buildResponse(HttpStatus.NOT_FOUND, ex.getMessage(), null);
+  }
+
+  @ExceptionHandler(NoEsGrupoException.class)
+  public ResponseEntity<Map<String, Object>> handleNoEsGrupo(NoEsGrupoException ex) {
+    return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), null);
+  }
+
+  @ExceptionHandler(AutoSeguimientoException.class)
+  public ResponseEntity<Map<String, Object>> handleAutoSeguimiento(AutoSeguimientoException ex) {
+    return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), null);
   }
 
   // manejos personalizados
@@ -77,5 +77,23 @@ public class GlobalExceptionHandler {
   @ExceptionHandler(ProcesamientoImagenException.class)
   public ResponseEntity<Map<String, Object>> handleImageProcessing(ProcesamientoImagenException ex) {
     return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Error al procesar el archivo multimedia", ex.getMessage());
+  }
+  // Manejo genérico para cualquier otro error (500)
+  @ExceptionHandler(Exception.class)
+  public ResponseEntity<Map<String, Object>> handleGenericException(Exception ex) {
+    return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Error interno del servidor", ex.getMessage());
+  }
+
+  // Método auxiliar para estructurar la respuesta del error
+  private ResponseEntity<Map<String, Object>> buildResponse(HttpStatus status, String message, Object details) {
+    Map<String, Object> response = new HashMap<>();
+    response.put("timestamp", LocalDateTime.now());
+    response.put("status", status.value());
+    response.put("error", status.getReasonPhrase());
+    response.put("message", message);
+    if (details != null) {
+      response.put("details", details);
+    }
+    return new ResponseEntity<>(response, status);
   }
 }
