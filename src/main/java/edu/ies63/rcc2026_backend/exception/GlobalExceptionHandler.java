@@ -40,7 +40,44 @@ public class GlobalExceptionHandler {
   public ResponseEntity<Map<String, Object>> handleResponseStatusException(ResponseStatusException ex) {
     return buildResponse(HttpStatus.valueOf(ex.getStatusCode().value()), ex.getReason(), null);
   }
+  @ExceptionHandler(UsuarioNoEncontradoException.class)
+  public ResponseEntity<Map<String, Object>> handleUsuarioNoEncontrado(UsuarioNoEncontradoException ex) {
+    return buildResponse(HttpStatus.NOT_FOUND, ex.getMessage(), null);
+  }
 
+  @ExceptionHandler(GrupoNoEncontradoException.class)
+  public ResponseEntity<Map<String, Object>> handleGrupoNoEncontrado(GrupoNoEncontradoException ex) {
+    return buildResponse(HttpStatus.NOT_FOUND, ex.getMessage(), null);
+  }
+
+  @ExceptionHandler(NoEsGrupoException.class)
+  public ResponseEntity<Map<String, Object>> handleNoEsGrupo(NoEsGrupoException ex) {
+    return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), null);
+  }
+
+  @ExceptionHandler(AutoSeguimientoException.class)
+  public ResponseEntity<Map<String, Object>> handleAutoSeguimiento(AutoSeguimientoException ex) {
+    return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), null);
+  }
+
+  // manejos personalizados
+  // Manejo de email duplicado (409)
+  @ExceptionHandler(EmailYaRegistradoException.class)
+  public ResponseEntity<Map<String, Object>> handleEmailAlreadyRegistered(EmailYaRegistradoException ex) {
+    return buildResponse(HttpStatus.CONFLICT, "Conflicto de registro", ex.getMessage());
+  }
+
+  // Manejo de contraseñas inválidas (400)
+  @ExceptionHandler(PasswordInvalidaException.class)
+  public ResponseEntity<Map<String, Object>> handleInvalidPassword(PasswordInvalidaException ex) {
+    return buildResponse(HttpStatus.BAD_REQUEST, "Error de validación de seguridad", ex.getMessage());
+  }
+
+  // Manejo de errores de archivos de imagen (500)
+  @ExceptionHandler(ProcesamientoImagenException.class)
+  public ResponseEntity<Map<String, Object>> handleImageProcessing(ProcesamientoImagenException ex) {
+    return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Error al procesar el archivo multimedia", ex.getMessage());
+  }
   // Manejo genérico para cualquier otro error (500)
   @ExceptionHandler(Exception.class)
   public ResponseEntity<Map<String, Object>> handleGenericException(Exception ex) {

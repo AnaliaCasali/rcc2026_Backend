@@ -63,7 +63,7 @@ public class SecurityConfig {
 
                 .requestMatchers(HttpMethod.GET, "/api/v1/auth/usuarios/{id}/perfil").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/auth/usuarios/lista-usuarios").permitAll()
-
+                .requestMatchers(HttpMethod.GET, "/api/v1/localidades").permitAll()
                 .requestMatchers("/api/v1/auth/cambiarpassword").authenticated()
                 .requestMatchers("/api/v1/auth/usuarios/perfil/mi-perfil").authenticated()
                 .requestMatchers(HttpMethod.PUT, "/api/v1/auth/usuarios/perfil").authenticated()
