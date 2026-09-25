@@ -59,4 +59,24 @@ public class GlobalExceptionHandler {
     }
     return new ResponseEntity<>(response, status);
   }
+  @ExceptionHandler(UsuarioNoEncontradoException.class)
+  public ResponseEntity<Map<String, Object>> handleUsuarioNoEncontrado(UsuarioNoEncontradoException ex) {
+    return buildResponse(HttpStatus.NOT_FOUND, ex.getMessage(), null);
+  }
+
+  @ExceptionHandler(GrupoNoEncontradoException.class)
+  public ResponseEntity<Map<String, Object>> handleGrupoNoEncontrado(GrupoNoEncontradoException ex) {
+    return buildResponse(HttpStatus.NOT_FOUND, ex.getMessage(), null);
+  }
+
+  @ExceptionHandler(NoEsGrupoException.class)
+  public ResponseEntity<Map<String, Object>> handleNoEsGrupo(NoEsGrupoException ex) {
+    return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), null);
+  }
+
+  @ExceptionHandler(AutoSeguimientoException.class)
+  public ResponseEntity<Map<String, Object>> handleAutoSeguimiento(AutoSeguimientoException ex) {
+    return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), null);
+  }
+
 }
