@@ -59,4 +59,23 @@ public class GlobalExceptionHandler {
     }
     return new ResponseEntity<>(response, status);
   }
+
+  // manejos personalizados
+  // Manejo de email duplicado (409)
+  @ExceptionHandler(EmailYaRegistradoException.class)
+  public ResponseEntity<Map<String, Object>> handleEmailAlreadyRegistered(EmailYaRegistradoException ex) {
+    return buildResponse(HttpStatus.CONFLICT, "Conflicto de registro", ex.getMessage());
+  }
+
+  // Manejo de contraseñas inválidas (400)
+  @ExceptionHandler(PasswordInvalidaException.class)
+  public ResponseEntity<Map<String, Object>> handleInvalidPassword(PasswordInvalidaException ex) {
+    return buildResponse(HttpStatus.BAD_REQUEST, "Error de validación de seguridad", ex.getMessage());
+  }
+
+  // Manejo de errores de archivos de imagen (500)
+  @ExceptionHandler(ProcesamientoImagenException.class)
+  public ResponseEntity<Map<String, Object>> handleImageProcessing(ProcesamientoImagenException ex) {
+    return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Error al procesar el archivo multimedia", ex.getMessage());
+  }
 }

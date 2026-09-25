@@ -7,6 +7,7 @@ import edu.ies63.rcc2026_backend.dto.RedSocialResponseDTO;
 import edu.ies63.rcc2026_backend.dto.UsuarioResponseDTO;
 import edu.ies63.rcc2026_backend.enums.Plataforma;
 import edu.ies63.rcc2026_backend.enums.TipoImagen;
+import edu.ies63.rcc2026_backend.exception.ProcesamientoImagenException;
 import edu.ies63.rcc2026_backend.model.ImagenPerfil;
 import edu.ies63.rcc2026_backend.model.RedSocial;
 import edu.ies63.rcc2026_backend.model.Usuario;
@@ -212,10 +213,7 @@ public class UsuarioServiceImpl implements UsuarioService, UserDetailsService {
 
     } catch (IOException e) {
       log.error("Error al comprimir/guardar imagen", e);
-      throw new ResponseStatusException(
-          HttpStatus.INTERNAL_SERVER_ERROR,
-          "Error al procesar y guardar la imagen"
-      );
+      throw new ProcesamientoImagenException("No se pudo procesar ni guardar la imagen en el servidor", e);
     }
   }
 
