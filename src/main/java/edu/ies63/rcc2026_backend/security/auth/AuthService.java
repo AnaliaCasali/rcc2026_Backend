@@ -10,7 +10,7 @@ import edu.ies63.rcc2026_backend.model.Localidad;
 import edu.ies63.rcc2026_backend.model.PasswordResetToken;
 import edu.ies63.rcc2026_backend.model.Usuario;
 import edu.ies63.rcc2026_backend.repository.LocalidadRepository;
-import edu.ies63.rcc2026_backend.repository.ResetPasswordRepository;
+import edu.ies63.rcc2026_backend.repository.PasswordResetTokenRepository;
 import edu.ies63.rcc2026_backend.repository.UsuarioRepository;
 import edu.ies63.rcc2026_backend.security.dto.*;
 import edu.ies63.rcc2026_backend.security.jwt.JwtService;
@@ -40,7 +40,7 @@ public class AuthService {
   private final PasswordEncoder passwordEncoder;
   private final JwtService jwtService;
   private final AuthenticationManager authenticationManager;
-  private final ResetPasswordRepository resetTokenRepository;
+  private final PasswordResetTokenRepository resetTokenRepository;
   private final EmailService emailService;
 
 
@@ -175,7 +175,7 @@ public class AuthService {
   }
 
   @Transactional
-  public void requestPasswordReset(OlvidePasswordRequest request) {
+  public void requestPasswordReset(ForgotPasswordRequest request) {
     Usuario user = userRepository.findByUsername(request.email())
             .or(() -> userRepository.findByUsername(request.email()))
             .orElse(null);
