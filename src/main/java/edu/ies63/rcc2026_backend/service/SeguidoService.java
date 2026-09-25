@@ -1,7 +1,6 @@
 package edu.ies63.rcc2026_backend.service;
 
 import edu.ies63.rcc2026_backend.dto.SeguidoResponseDTO;
-import edu.ies63.rcc2026_backend.model.Seguido;
 
 import java.util.List;
 

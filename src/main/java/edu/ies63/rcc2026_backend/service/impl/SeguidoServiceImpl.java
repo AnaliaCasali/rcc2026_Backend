@@ -83,7 +83,7 @@ public class SeguidoServiceImpl implements SeguidoService {
 
   private SeguidoResponseDTO toResponseDTO(Seguido seguido, Usuario elOtro) {
     String fotoPerfilUrl = (elOtro.getImagenesPerfil() != null && !elOtro.getImagenesPerfil().isEmpty())
-        ? elOtro.getImagenesPerfil().get(0).getUrl()
+        ? elOtro.getImagenesPerfil().getFirst().getUrl()
         : null;
 
     return new SeguidoResponseDTO(
