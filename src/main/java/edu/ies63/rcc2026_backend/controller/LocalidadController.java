@@ -1,6 +1,7 @@
 package edu.ies63.rcc2026_backend.controller;
 
-import edu.ies63.rcc2026_backend.model.Localidad;
+import edu.ies63.rcc2026_backend.dto.LocalidadMapResponseDTO;
+import edu.ies63.rcc2026_backend.dto.LocalidadResponseDTO;
 import edu.ies63.rcc2026_backend.service.LocalidadService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -18,10 +19,18 @@ public class LocalidadController {
   private final LocalidadService localidadService;
 
   @GetMapping
-  public ResponseEntity<List<Localidad>> listarLocalidades() {
+  public ResponseEntity<List<LocalidadResponseDTO>> listar() {
 
     return ResponseEntity.ok(
         localidadService.listarLocalidades()
+    );
+  }
+
+  @GetMapping("/mapa")
+  public ResponseEntity<List<LocalidadMapResponseDTO>> listarMapa() {
+
+    return ResponseEntity.ok(
+        localidadService.listarLocalidadesMapa()
     );
   }
 }

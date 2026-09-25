@@ -1,9 +1,13 @@
 package edu.ies63.rcc2026_backend.service;
 
+import edu.ies63.rcc2026_backend.dto.LocalidadMapResponseDTO;
+import edu.ies63.rcc2026_backend.dto.LocalidadResponseDTO;
 import edu.ies63.rcc2026_backend.model.Localidad;
 
 import java.util.List;
 
 public interface LocalidadService {
-  List<Localidad> listarLocalidades();
+  List<LocalidadResponseDTO> listarLocalidades();
+
+  List<LocalidadMapResponseDTO> listarLocalidadesMapa();
 }
