@@ -13,6 +13,9 @@ import edu.ies63.rcc2026_backend.model.Usuario;
 import edu.ies63.rcc2026_backend.repository.UsuarioRepository;
 import edu.ies63.rcc2026_backend.service.UsuarioService;
 import lombok.extern.slf4j.Slf4j;
+import net.coobird.thumbnailator.Thumbnails;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -26,7 +29,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -35,7 +37,7 @@ import java.util.UUID;
 @Slf4j
 public class UsuarioServiceImpl implements UsuarioService, UserDetailsService {
   private final UsuarioRepository usuarioRepository;
-  private final String UPLOAD_DIR = "uploads/perfiles/";
+  private final String UPLOAD_DIR = "/uploads/perfiles/";
   private static final List<String> TIPOS_PERMITIDOS = List.of("image/jpeg", "image/png", "image/webp");
 
   public UsuarioServiceImpl(UsuarioRepository usuarioRepository) {
@@ -52,14 +54,9 @@ public class UsuarioServiceImpl implements UsuarioService, UserDetailsService {
   }
 
   @Override
-  public List<UsuarioResponseDTO> listarUsuarios() {
-    List<UsuarioResponseDTO> lista =
-        usuarioRepository
-            .findAll()
-            .stream()
-            .map(this::toResponseDTO)
-            .toList();
-    return lista;
+  public Page<UsuarioResponseDTO> listarUsuarios(Pageable pageable) {
+    return usuarioRepository.findAll(pageable)
+        .map(this::toResponseDTO); // Page ya tiene el método .map() integrado, no necesitas .stream()
   }
 
   // para editar perfil
@@ -86,12 +83,14 @@ public class UsuarioServiceImpl implements UsuarioService, UserDetailsService {
     }
 
     if (request.fotoPerfil() != null && !request.fotoPerfil().isEmpty()) {
-      String url = guardarArchivoLocalmente(request.fotoPerfil());
+      // Pasamos el TipoImagen como segundo parámetro
+      String url = guardarArchivoLocalmente(request.fotoPerfil(), TipoImagen.FOTOPERFIL);
       actualizarEntidadImagen(user, url, TipoImagen.FOTOPERFIL);
     }
 
     if (request.fotoBanner() != null && !request.fotoBanner().isEmpty()) {
-      String url = guardarArchivoLocalmente(request.fotoBanner());
+      // Pasamos el TipoImagen como segundo parámetro
+      String url = guardarArchivoLocalmente(request.fotoBanner(), TipoImagen.PORTADA);
       actualizarEntidadImagen(user, url, TipoImagen.PORTADA);
     }
 
@@ -159,7 +158,19 @@ public class UsuarioServiceImpl implements UsuarioService, UserDetailsService {
 
   // para agregar imágenes
   private void actualizarEntidadImagen(Usuario user, String url, TipoImagen tipo) {
-    user.getImagenesPerfil().removeIf(img -> img.getTipoImagen() == tipo);
+    user.getImagenesPerfil().removeIf(img -> {
+      if (img.getTipoImagen() == tipo) {
+        try {
+          Path rutaArchivo = Paths.get(img.getUrl().substring(1));
+          Files.deleteIfExists(rutaArchivo);
+        } catch (IOException e) {
+          log.warn("No se pudo eliminar la imagen anterior: {}", img.getUrl());
+        }
+        return true;
+      }
+      return false;
+    });
+
     user.getImagenesPerfil().add(ImagenPerfil.builder()
         .url(url)
         .tipoImagen(tipo)
@@ -168,28 +179,42 @@ public class UsuarioServiceImpl implements UsuarioService, UserDetailsService {
         .build());
   }
 
-  private String guardarArchivoLocalmente(MultipartFile file) {
+  private String guardarArchivoLocalmente(MultipartFile file, TipoImagen tipo) {
     try {
       Path rutaDirectorio = Paths.get(UPLOAD_DIR);
       if (!Files.exists(rutaDirectorio)) {
         Files.createDirectories(rutaDirectorio);
       }
 
-      // Reemplaza espacios por guiones bajos para evitar problemas en URLs
-      String nombreOriginal = file.getOriginalFilename() != null ?
-          file.getOriginalFilename().replaceAll("\\s+", "_") :
-          "imagen.jpg";
+      // 1. Extraer nombre y forzar la extensión a .webp
+      String nombreOriginal = file.getOriginalFilename() != null ? file.getOriginalFilename() : "imagen";
+      String nombreSinExtension = nombreOriginal.contains(".")
+          ? nombreOriginal.substring(0, nombreOriginal.lastIndexOf('.'))
+          : nombreOriginal;
+      String nombreLimpio = nombreSinExtension.replaceAll("\\s+", "_");
 
-      String nombreArchivo = UUID.randomUUID().toString() + "_" + nombreOriginal;
+      String nombreArchivo = UUID.randomUUID().toString() + "_" + nombreLimpio + ".webp";
       Path rutaArchivo = rutaDirectorio.resolve(nombreArchivo);
 
-      Files.copy(file.getInputStream(), rutaArchivo, StandardCopyOption.REPLACE_EXISTING);
+      // 2. Definir límites de tamaño según si es Perfil o Banner
+      // El perfil suele ser cuadrado y pequeño, el banner horizontal y más grande.
+      int maxWidth = (tipo == TipoImagen.FOTOPERFIL) ? 400 : 1200;
+      int maxHeight = (tipo == TipoImagen.FOTOPERFIL) ? 400 : 600;
+
+      // 3. Convertir, redimensionar y guardar usando Thumbnailator
+      Thumbnails.of(file.getInputStream())
+          .size(maxWidth, maxHeight) // Escala la imagen para que encaje en estas dimensiones sin deformarse
+          .outputFormat("webp")      // Gracias a webp-imageio, esto convierte PNG/JPG a WebP
+          .outputQuality(0.8)        // Calidad al 80% (excelente balance entre peso y nitidez)
+          .toFile(rutaArchivo.toFile());
 
       return "/uploads/perfiles/" + nombreArchivo;
+
     } catch (IOException e) {
+      log.error("Error al comprimir/guardar imagen", e);
       throw new ResponseStatusException(
           HttpStatus.INTERNAL_SERVER_ERROR,
-          "Error al guardar la imagen"
+          "Error al procesar y guardar la imagen"
       );
     }
   }
