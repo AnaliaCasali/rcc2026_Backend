@@ -74,7 +74,7 @@ public class AuthController {
         .body(authService.registerGrupo(request));
   }
 
-  @PostMapping("/forgot-password")
+  /*@PostMapping("/forgot-password")
   public ResponseEntity<Void> forgotPassword(@Valid @RequestBody OlvidePasswordRequest request) {
     authService.requestPasswordReset(request);
     return ResponseEntity.ok().build();
@@ -85,4 +85,6 @@ public class AuthController {
     authService.resetPassword(request);
     return ResponseEntity.ok().build();
   }
+
+   */
 }
