@@ -5,17 +5,11 @@ import edu.ies63.rcc2026_backend.dto.SeguidoResponseDTO;
 import java.util.List;
 
 public interface SeguidoService {
-
   boolean toggleSeguimiento(Long usuarioId, Long grupoId);
-
   boolean estaSiguiendo(Long usuarioId, Long grupoId);
-
   long contarSeguidores(Long grupoId);
-  // grupos a los que sigue el usuario
+  long contarSeguidos(Long usuarioId);
   List<SeguidoResponseDTO> listarSeguidos(Long usuarioId);
-
-  // usuarios que siguen al grupo
   List<SeguidoResponseDTO> listarSeguidores(Long grupoId);
 }
-
 

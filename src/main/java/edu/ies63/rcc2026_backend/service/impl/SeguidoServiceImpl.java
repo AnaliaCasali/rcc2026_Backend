@@ -66,10 +66,15 @@ public class SeguidoServiceImpl implements SeguidoService {
   }
 
   @Override
+  public long contarSeguidos(Long usuarioId) {
+    return seguidoRepository.countByUsuarioId(usuarioId);
+  }
+
+  @Override
   public List<SeguidoResponseDTO> listarSeguidos(Long usuarioId) {
     return seguidoRepository.findByUsuarioId(usuarioId)
         .stream()
-        .map(seguido -> toResponseDTO(seguido, seguido.getGrupo()))
+        .map(seguido -> toResponseDTO(seguido, seguido.getGrupo(), usuarioId, true))
         .toList();
   }
 
@@ -77,21 +82,29 @@ public class SeguidoServiceImpl implements SeguidoService {
   public List<SeguidoResponseDTO> listarSeguidores(Long grupoId) {
     return seguidoRepository.findByGrupoId(grupoId)
         .stream()
-        .map(seguido -> toResponseDTO(seguido, seguido.getUsuario()))
+        .map(seguido -> toResponseDTO(seguido, seguido.getUsuario(), grupoId, false))
         .toList();
   }
 
-  private SeguidoResponseDTO toResponseDTO(Seguido seguido, Usuario elOtro) {
-    String fotoPerfilUrl = (elOtro.getImagenesPerfil() != null && !elOtro.getImagenesPerfil().isEmpty())
-        ? elOtro.getImagenesPerfil().getFirst().getUrl()
+  private SeguidoResponseDTO toResponseDTO(Seguido seguido, Usuario elOtro, Long loggedUserId, boolean esSeguido) {
+    String fotoPerfilUrl = (elOtro.getImagenesPerfil() != null)
+        ? elOtro.getImagenesPerfil().stream()
+        .findFirst()
+        .map(img -> img.getUrl())
+        .orElse(null)
         : null;
 
+    boolean seguidoFlag = esSeguido
+        ? true // si estoy listando mis seguidos, siempre true
+        : seguidoRepository.existsByUsuarioIdAndGrupoId(loggedUserId, elOtro.getId());
+
     return new SeguidoResponseDTO(
-        seguido.getId(),
-        elOtro.getId(),
-        elOtro.getNombre(),
-        elOtro.getRole(),
-        fotoPerfilUrl
+        seguido.getId(),       // id del seguimiento
+        elOtro.getId(),        // id del usuario/grupo seguido
+        elOtro.getNombre(),    // nombre
+        elOtro.getRole(),      // tipoUsuario
+        fotoPerfilUrl,         // fotoPerfilUrl
+        seguidoFlag            // booleano calculado
     );
   }
 }

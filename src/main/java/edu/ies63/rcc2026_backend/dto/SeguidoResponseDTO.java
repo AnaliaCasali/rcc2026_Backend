@@ -7,5 +7,6 @@ public record SeguidoResponseDTO(
     Long usuarioId,
     String nombre,
     Role tipoUsuario,
-    String fotoPerfilUrl   // null si no cargó foto
+    String fotoPerfilUrl,
+    boolean seguido
 ) {}
