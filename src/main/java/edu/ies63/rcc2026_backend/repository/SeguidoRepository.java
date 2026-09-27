@@ -22,6 +22,7 @@ public interface SeguidoRepository extends JpaRepository<Seguido, Long> {
 
   long countByGrupoId(Long grupoId);
 
+  long countByUsuarioId(Long usuarioId);
 
   List<Seguido> findByUsuarioId(Long usuarioId);
 
