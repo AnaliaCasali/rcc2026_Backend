@@ -43,4 +43,5 @@ class ForgotPasswordRequestTest {
         assertThat(violations).hasSize(1);
         assertThat(violations.iterator().next().getMessage()).contains("obligatorio");
     }
+
 }

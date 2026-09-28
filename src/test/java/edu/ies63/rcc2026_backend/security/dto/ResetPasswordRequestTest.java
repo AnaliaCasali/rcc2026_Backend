@@ -69,4 +69,5 @@ class ResetPasswordRequestTest {
         assertThat(violations).hasSize(1);
         assertThat(violations.iterator().next().getMessage()).contains("al menos 6 caracteres");
     }
+
 }

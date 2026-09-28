@@ -170,4 +170,5 @@ class AuthControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk());
     }
+
 }

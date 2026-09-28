@@ -26,4 +26,5 @@ class AuthRequestTest {
         assertThat(dto1).isEqualTo(dto2);
         assertThat(dto1.hashCode()).isEqualTo(dto2.hashCode());
     }
+
 }

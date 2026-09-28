@@ -141,4 +141,5 @@ class JwtAuthFilterTest {
         assertThat(response.getStatus()).isEqualTo(401);
         assertThat(response.getContentAsString()).contains("Token inválido");
     }
+
 }

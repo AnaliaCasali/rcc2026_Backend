@@ -143,4 +143,5 @@ class AuthIntegrationTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isNoContent());
     }
+
 }
