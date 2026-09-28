@@ -74,17 +74,17 @@ public class AuthController {
         .body(authService.registerGrupo(request));
   }
 
-  /*@PostMapping("/forgot-password")
-  public ResponseEntity<Void> forgotPassword(@Valid @RequestBody OlvidePasswordRequest request) {
+  @PostMapping("/forgot-password")
+  @Operation(summary = "Olvide Contraseña")
+  public ResponseEntity<Void> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
     authService.requestPasswordReset(request);
     return ResponseEntity.ok().build();
   }
 
   @PostMapping("/reset-password")
+  @Operation(summary = "Reiniciar Contraseña Olvidada")
   public ResponseEntity<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
     authService.resetPassword(request);
     return ResponseEntity.ok().build();
   }
-
-   */
 }
