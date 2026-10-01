@@ -25,7 +25,8 @@ public class BusquedaController {
             @RequestParam(required = false) String ubicacion,
             @RequestParam(required = false) Double lat,
             @RequestParam(required = false) Double lng,
-            @RequestParam(required = false) Integer radioKm) {
+            @RequestParam(required = false) Integer radioKm,
+            @RequestParam(required = false) String rol){
 
         // Si viene lat sin lng, o al revés
         if ((lat != null && lng == null) || (lat == null && lng != null)) {
@@ -37,7 +38,7 @@ public class BusquedaController {
             throw new BusquedaInvalidaException("radioKm debe ser un valor positivo al usar GPS");
         }
 
-        List<PerfilBusquedaDTO> resultados = busquedaService.buscar(texto, ubicacion, lat, lng, radioKm);
+        List<PerfilBusquedaDTO> resultados = busquedaService.buscar(texto, ubicacion, lat, lng, radioKm, rol);
         return ResponseEntity.ok(resultados);
     }
 }
