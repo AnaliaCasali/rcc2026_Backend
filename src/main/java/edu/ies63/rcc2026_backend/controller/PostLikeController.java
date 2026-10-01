@@ -2,30 +2,25 @@ package edu.ies63.rcc2026_backend.controller;
 
 import edu.ies63.rcc2026_backend.dto.LikeResponseDTO;
 import edu.ies63.rcc2026_backend.service.PostLikeService;
-import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1/posts")
+@RequestMapping("/api/v1/posts/{postId}/likes")
 @RequiredArgsConstructor
 public class PostLikeController {
 
-    private final PostLikeService postLikeService;
+    private final PostLikeService likeService;
 
-    @PostMapping("/{postId}/like")
-    @Operation(summary = "Dar Like")
+    @PostMapping("/toggle")
     public ResponseEntity<LikeResponseDTO> toggleLike(
             @PathVariable Long postId,
             @AuthenticationPrincipal UserDetails userDetails) {
 
-        LikeResponseDTO response = postLikeService.toggleLike(postId, userDetails.getUsername());
-        return ResponseEntity.ok(response);
+        LikeResponseDTO resultado = likeService.toggleLike(postId, userDetails.getUsername());
+        return ResponseEntity.ok(resultado);
     }
 }

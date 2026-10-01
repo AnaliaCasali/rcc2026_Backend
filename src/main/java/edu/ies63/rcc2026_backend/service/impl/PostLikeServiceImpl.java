@@ -3,8 +3,8 @@ package edu.ies63.rcc2026_backend.service.impl;
 import edu.ies63.rcc2026_backend.dto.LikeResponseDTO;
 import edu.ies63.rcc2026_backend.exception.PostNotFoundException;
 import edu.ies63.rcc2026_backend.exception.UsuarioNoEncontradoException;
-import edu.ies63.rcc2026_backend.model.Post;
 import edu.ies63.rcc2026_backend.model.PostLike;
+import edu.ies63.rcc2026_backend.model.Post;
 import edu.ies63.rcc2026_backend.model.Usuario;
 import edu.ies63.rcc2026_backend.repository.PostLikeRepository;
 import edu.ies63.rcc2026_backend.repository.PostRepository;
@@ -20,38 +20,38 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class PostLikeServiceImpl implements PostLikeService {
 
-    private final PostLikeRepository postLikeRepository;
+    private final PostLikeRepository likeRepository;
     private final PostRepository postRepository;
     private final UsuarioRepository usuarioRepository;
 
     @Override
     @Transactional
     public LikeResponseDTO toggleLike(Long postId, String username) {
-        Usuario usuario = usuarioRepository.findByUsername(username)
-                .orElseThrow(() -> new UsuarioNoEncontradoException(username));
-
         Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new PostNotFoundException(postId));
+                .orElseThrow(() -> new PostNotFoundException("No se encontró el post con ID: " + postId));
 
-        Optional<PostLike> likeExistente = postLikeRepository.findByUsuarioAndPost(usuario, post);
+        Usuario usuario = usuarioRepository.findByUsername(username)
+                .orElseThrow(() -> new UsuarioNoEncontradoException("No se encontró el usuario: " + username));
 
-        boolean nuevoEstado;
+        Optional<PostLike> likeExistente = likeRepository.findByPost_IdAndUsuario_Id(postId, usuario.getId());
+
+        boolean dioLike;
         if (likeExistente.isPresent()) {
-            PostLike like = likeExistente.get();
-            nuevoEstado = !like.isActivo();
-            like.setActivo(nuevoEstado);
-            postLikeRepository.save(like);
+            // Ya le había dado me gusta: se quita
+            likeRepository.delete(likeExistente.get());
+            dioLike = false;
         } else {
-            nuevoEstado = true;
+            // No le había dado me gusta: se registra
             PostLike nuevoLike = PostLike.builder()
-                    .usuario(usuario)
                     .post(post)
-                    .activo(true)
+                    .usuario(usuario)
                     .build();
-            postLikeRepository.save(nuevoLike);
+            likeRepository.save(nuevoLike);
+            dioLike = true;
         }
 
-        long totalLikes = postLikeRepository.countByPostAndActivoTrue(post);
-        return new LikeResponseDTO(nuevoEstado, totalLikes);
+        long totalLikes = likeRepository.countByPost_Id(postId);
+
+        return new LikeResponseDTO(postId, dioLike, totalLikes);
     }
 }
