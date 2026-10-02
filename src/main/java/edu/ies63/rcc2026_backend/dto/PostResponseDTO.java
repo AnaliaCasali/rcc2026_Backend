@@ -2,6 +2,7 @@ package edu.ies63.rcc2026_backend.dto;
 
 import edu.ies63.rcc2026_backend.enums.TipoPost;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 public record PostResponseDTO(
@@ -9,6 +10,8 @@ public record PostResponseDTO(
     String titulo,
     String descripcion,
     TipoPost tipoPost,
+    LocalDateTime fechaCreacion,
     String linkVideo,
     List<ImagenPostDTO> imagenes
-) {}
+) {
+}
