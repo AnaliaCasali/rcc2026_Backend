@@ -3,6 +3,7 @@ package edu.ies63.rcc2026_backend.service.impl;
 import edu.ies63.rcc2026_backend.dto.ImagenPostDTO;
 import edu.ies63.rcc2026_backend.dto.PostCreateDTO;
 import edu.ies63.rcc2026_backend.dto.PostResponseDTO;
+import edu.ies63.rcc2026_backend.dto.PostUpdateDTO;
 import edu.ies63.rcc2026_backend.enums.TipoPost;
 import edu.ies63.rcc2026_backend.exception.ProcesamientoImagenException;
 import edu.ies63.rcc2026_backend.model.ImagenPost;
@@ -57,6 +58,7 @@ public class PostServiceImpl implements PostService {
         post.getTitulo(),
         post.getDescripcion(),
         post.getTipoPost(),
+        post.getFechaCreacion(),
         post.getLinkVideo(),
         imagenesDTO
     );
@@ -106,6 +108,55 @@ public class PostServiceImpl implements PostService {
 
       Post postGuardado = postRepository.save(post);
       return toResponseDTO(postGuardado);
+  }
+
+  @Override
+  @Transactional
+  public PostResponseDTO editarPost(Long id, PostUpdateDTO request, String username) {
+    Post post = postRepository.findById(id)
+        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Publicación no encontrada"));
+
+    if (!post.getUsuario().getUsername().equals(username)) {
+      throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No tienes permiso para editar esta publicación");
+    }
+
+    if (request.titulo() != null && !request.titulo().isBlank()) {
+      post.setTitulo(request.titulo());
+    }
+    if (request.descripcion() != null) {
+      post.setDescripcion(request.descripcion());
+    }
+    if (request.linkVideo() != null) {
+      post.setLinkVideo(request.linkVideo().isBlank() ? null : request.linkVideo());
+    }
+
+    Post postActualizado = postRepository.save(post);
+    return toResponseDTO(postActualizado);
+  }
+
+  @Override
+  @Transactional
+  public void eliminarPost(Long id, String username) {
+    Post post = postRepository.findById(id)
+        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Publicación no encontrada"));
+
+    if (!post.getUsuario().getUsername().equals(username)) {
+      throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No tienes permiso para eliminar esta publicación");
+    }
+
+    if (post.getImagenes() != null) {
+      post.getImagenes().forEach(img -> {
+        try {
+          String rutaRelativa = img.getUrl().startsWith("/") ? img.getUrl().substring(1) : img.getUrl();
+          Path rutaArchivo = Paths.get(rutaRelativa);
+          Files.deleteIfExists(rutaArchivo);
+        } catch (IOException e) {
+          log.warn("No se pudo eliminar la imagen física del servidor: {}", img.getUrl());
+        }
+      });
+    }
+
+    postRepository.delete(post);
   }
 
   // para guardado de imagenes
