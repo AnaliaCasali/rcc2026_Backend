@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -27,18 +28,33 @@ public class PostController {
 
   private final PostService postService;
 
+  // Principal es null cuando entra un visitante sin sesión
+  private String nombreONull(Principal principal) {
+    return principal != null ? principal.getName() : null;
+  }
+
   @GetMapping
-  @Operation(summary = "Listar todas las publicaciones (tipo POST)")
+  @Operation(summary = "Listar todas las publicaciones (tipo POST) - público")
   public ResponseEntity<Page<PostResponseDTO>> listarPosts(
-      @PageableDefault(size = 10, sort = "fechaCreacion") Pageable pageable) {
-    return ResponseEntity.ok(postService.listarPosts(pageable));
+      @PageableDefault(size = 10, sort = "fechaCreacion", direction = Sort.Direction.DESC) Pageable pageable,
+      Principal principal) {
+    return ResponseEntity.ok(postService.listarPosts(pageable, nombreONull(principal)));
+  }
+
+  @GetMapping("/feed")
+  @Operation(summary = "Feed: publicaciones de las cuentas que sigo")
+  public ResponseEntity<Page<PostResponseDTO>> feed(
+      @PageableDefault(size = 20, sort = "fechaCreacion", direction = Sort.Direction.DESC) Pageable pageable,
+      Principal principal) {
+    return ResponseEntity.ok(postService.listarFeed(pageable, principal.getName()));
   }
 
   @GetMapping("/premios")
   @Operation(summary = "Listar todos los premios (tipo PREMIO)")
   public ResponseEntity<Page<PostResponseDTO>> listarPremios(
-      @PageableDefault(size = 10, sort = "fechaCreacion") Pageable pageable) {
-    return ResponseEntity.ok(postService.listarPremios(pageable));
+      @PageableDefault(size = 10, sort = "fechaCreacion", direction = Sort.Direction.DESC) Pageable pageable,
+      Principal principal) {
+    return ResponseEntity.ok(postService.listarPremios(pageable, nombreONull(principal)));
   }
 
   @PostMapping(value = "crear-post", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
