@@ -3,6 +3,7 @@ package edu.ies63.rcc2026_backend.service.impl;
 import edu.ies63.rcc2026_backend.dto.ImagenPostDTO;
 import edu.ies63.rcc2026_backend.dto.PostCreateDTO;
 import edu.ies63.rcc2026_backend.dto.PostResponseDTO;
+import edu.ies63.rcc2026_backend.enums.Role;
 import edu.ies63.rcc2026_backend.enums.TipoImagen;
 import edu.ies63.rcc2026_backend.dto.PostUpdateDTO;
 import edu.ies63.rcc2026_backend.enums.TipoPost;
@@ -29,6 +30,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -77,15 +79,12 @@ public class PostServiceImpl implements PostService {
         autor.getUsername(),
         autor.getNombre(),
         fotoPerfilUrl,
-
         post.getTitulo(),
         post.getDescripcion(),
         post.getTipoPost(),
-        post.getFechaCreacion(),
-        post.getLinkVideo(),
+         post.getLinkVideo(),
         imagenesDTO,
         post.getFechaCreacion(),
-        autor.getId(),
         autor.getNombre(),
         fotoPerfilUrl,
         autor.getRole(),
@@ -224,7 +223,7 @@ public class PostServiceImpl implements PostService {
     }
 
     Post postActualizado = postRepository.save(post);
-    return toResponseDTO(postActualizado);
+    return null; // toResponseDTO(postActualizado);
   }
 
   // (Método auxiliar añadido en tu PostServiceImpl)

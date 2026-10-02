@@ -14,16 +14,13 @@ public record PostResponseDTO(
     String username,
     String nombreUsuario,
     String fotoPerfilUsuario,
-
     // datos usuario
     String titulo,
     String descripcion,
     TipoPost tipoPost,
-    LocalDateTime fechaCreacion,
     String linkVideo,
     List<ImagenPostDTO> imagenes,
     LocalDateTime fechaCreacion,
-    Long usuarioId,
     String usuarioNombre,
     String usuarioFotoPerfilUrl,
     Role usuarioRole,

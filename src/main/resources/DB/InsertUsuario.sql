@@ -125,7 +125,7 @@ VALUES ('lucia.gomez@gmail.com',
 
        ('valeria.sosa@gmail.com',
         '$2a$12$LQv3c1yqSNWvklg041.v9u2jG1H7dF7F7F7F7F7F7F7F7F7F7F7F', -- password123
-        'USUARIO',
+        'cUSUARIO',
         'Valeria Sosa',
         'Amante de la cultura tradicional y fotógrafa especializada en eventos folklóricos.',
         NULL,
