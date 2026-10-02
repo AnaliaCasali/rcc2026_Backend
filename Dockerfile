@@ -1,24 +1,18 @@
-# Etapa 1: Construcción
-FROM eclipse-temurin:25-jdk-alpine AS builder
+# Etapa 1: compilar con Maven
+FROM maven:3.9-eclipse-temurin-25 AS build
 WORKDIR /app
-
-COPY .mvn/ .mvn
-COPY mvnw pom.xml ./
-# RUN chmod +x ./mvnw
-# RUN ./mvnw dependency:go-offline
-
+COPY pom.xml .
+RUN mvn -q dependency:go-offline
 COPY src ./src
-RUN ./mvnw clean package -DskipTests
+RUN mvn -q package -DskipTests
 
-# Etapa 2: Ejecución
-FROM eclipse-temurin:25-jre-alpine
+# Etapa 2: imagen liviana solo con el JRE
+FROM eclipse-temurin:25-jre
 WORKDIR /app
-
-COPY --from=builder /app/target/rcc2026_backend-0.0.1-SNAPSHOT.jar app.jar
+COPY --from=build /app/target/*.jar app.jar
 
 # Crear carpeta para almacenamiento de fotos
 RUN mkdir -p uploads/perfiles
 
 EXPOSE 8080
-
 ENTRYPOINT ["java", "-jar", "app.jar"]
