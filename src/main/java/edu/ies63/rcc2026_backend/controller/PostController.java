@@ -47,7 +47,7 @@ public class PostController {
     return ResponseEntity.ok(postService.listarPremios(pageable));
   }
 
-  @PostMapping(value = "crear-post", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+  @PostMapping(value = "/crear", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   @Operation(summary = "Crear una nueva publicación")
   public ResponseEntity<PostResponseDTO> crearPost(
       @Valid @ModelAttribute PostCreateDTO request,
@@ -58,18 +58,18 @@ public class PostController {
   }
 
   // agregar endpoints para editar y eliminar
-  @PatchMapping("/{id}")
+  @PatchMapping(value = "/editar/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   @Operation(summary = "Editar una publicación")
   public ResponseEntity<PostResponseDTO> editarPost(
       @PathVariable Long id,
-      @Valid @RequestBody PostUpdateDTO request,
+      @Valid @ModelAttribute PostUpdateDTO request,
       Principal connectedUser
   ) {
     PostResponseDTO response = postService.editarPost(id, request, connectedUser.getName());
     return ResponseEntity.ok(response);
   }
 
-  @DeleteMapping("/{id}")
+  @DeleteMapping("/eliminar/{id}")
   @Operation(summary = "Eliminar una publicación")
   public ResponseEntity<Void> eliminarPost(
       @PathVariable Long id,
