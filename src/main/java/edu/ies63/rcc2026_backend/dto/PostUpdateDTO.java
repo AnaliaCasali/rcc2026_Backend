@@ -2,6 +2,9 @@ package edu.ies63.rcc2026_backend.dto;
 
 import jakarta.validation.constraints.Size;
 import org.hibernate.validator.constraints.URL;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 public record PostUpdateDTO(
     @Size(max = 50, message = "El título no puede superar los 50 caracteres")
@@ -11,6 +14,10 @@ public record PostUpdateDTO(
     String descripcion,
 
     @URL(message = "El enlace del video debe ser una URL válida")
-    String linkVideo
+    String linkVideo,
+
+    // permitimos la modificacion de imagenes
+    List<MultipartFile> imagenes,
+    List<Long> imagenesAEliminar
 ) {
 }

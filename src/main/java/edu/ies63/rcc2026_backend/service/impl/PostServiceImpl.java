@@ -53,8 +53,20 @@ public class PostServiceImpl implements PostService {
         .collect(Collectors.toList())
         : new ArrayList<>();
 
+    Usuario autor = post.getUsuario();
+    String fotoPerfilUrl = null;
+
+    if (autor.getImagenesPerfil() != null && !autor.getImagenesPerfil().isEmpty()) {
+      fotoPerfilUrl = autor.getImagenesPerfil().getFirst().getUrl();
+    }
+
     return new PostResponseDTO(
         post.getId(),
+        autor.getId(),
+        autor.getUsername(),
+        autor.getNombre(),
+        fotoPerfilUrl,
+
         post.getTitulo(),
         post.getDescripcion(),
         post.getTipoPost(),
@@ -130,8 +142,52 @@ public class PostServiceImpl implements PostService {
       post.setLinkVideo(request.linkVideo().isBlank() ? null : request.linkVideo());
     }
 
+    if (request.imagenesAEliminar() != null && !request.imagenesAEliminar().isEmpty()) {
+      List<ImagenPost> imagenesParaBorrar = post.getImagenes().stream()
+          .filter(img -> request.imagenesAEliminar().contains(img.getId()))
+          .toList();
+
+      eliminarImagenesFisicas(imagenesParaBorrar);
+      post.getImagenes().removeAll(imagenesParaBorrar);
+    }
+
+    if (request.imagenes() != null && !request.imagenes().isEmpty()
+        && request.imagenes().stream().noneMatch(MultipartFile::isEmpty)) {
+
+      List<ImagenPost> imagenesAgregadas = request.imagenes().stream().map(archivo -> {
+        String url = guardarArchivoLocalmente(archivo);
+        return ImagenPost.builder()
+            .url(url)
+            .alt("Imagen de " + post.getTitulo())
+            .post(post) // Vinculamos al post actual
+            .build();
+      }).toList();
+
+      post.getImagenes().addAll(imagenesAgregadas);
+    }
+
+    // 3. Validación de integridad
+    if (post.getImagenes().isEmpty()) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La publicación debe tener al menos una imagen.");
+    }
+
     Post postActualizado = postRepository.save(post);
     return toResponseDTO(postActualizado);
+  }
+
+  // (Método auxiliar añadido en tu PostServiceImpl)
+  private void eliminarImagenesFisicas(List<ImagenPost> imagenes) {
+    if (imagenes != null) {
+      imagenes.forEach(img -> {
+        try {
+          String rutaRelativa = img.getUrl().startsWith("/") ? img.getUrl().substring(1) : img.getUrl();
+          Path rutaArchivo = Paths.get(rutaRelativa);
+          Files.deleteIfExists(rutaArchivo);
+        } catch (IOException e) {
+          log.warn("No se pudo eliminar la imagen física del servidor: {}", img.getUrl());
+        }
+      });
+    }
   }
 
   @Override
