@@ -2,6 +2,8 @@ package edu.ies63.rcc2026_backend.service.impl;
 
 import edu.ies63.rcc2026_backend.dto.PerfilBusquedaDTO;
 import edu.ies63.rcc2026_backend.enums.Role;
+import edu.ies63.rcc2026_backend.enums.TipoImagen;
+import edu.ies63.rcc2026_backend.model.ImagenPerfil;
 import edu.ies63.rcc2026_backend.model.Usuario;
 import edu.ies63.rcc2026_backend.repository.UsuarioRepository;
 import edu.ies63.rcc2026_backend.service.BusquedaService;
@@ -77,9 +79,12 @@ public class BusquedaServiceImpl implements BusquedaService {
                         distancia = Math.round(distancia * 10.0) / 10.0;
                     }
 
-                    String fotoUrl = (u.getImagenesPerfil() != null && !u.getImagenesPerfil().isEmpty())
-                            ? u.getImagenesPerfil().getFirst().getUrl()
-                            : null;
+                    String fotoUrl = u.getImagenesPerfil() == null ? null
+                        : u.getImagenesPerfil().stream()
+                        .filter(i -> i.getTipoImagen() == TipoImagen.FOTOPERFIL)
+                        .map(ImagenPerfil::getUrl)
+                        .findFirst()
+                        .orElse(null);
 
                     return new PerfilBusquedaDTO(
                             u.getId(),

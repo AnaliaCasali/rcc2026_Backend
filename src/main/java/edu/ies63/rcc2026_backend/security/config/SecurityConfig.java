@@ -64,8 +64,9 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/v1/auth/usuarios/{id}/perfil").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/auth/usuarios/lista-usuarios").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/localidades").permitAll()
-
                 .requestMatchers(HttpMethod.GET, "/api/v1/posts").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/auth/usuarios/{id}/posts").permitAll()
+
                 .requestMatchers(HttpMethod.GET, "/api/v1/posts/premios").permitAll()
 
                 .requestMatchers("/api/v1/auth/cambiarpassword").authenticated()

@@ -1,5 +1,7 @@
 package edu.ies63.rcc2026_backend.dto;
 
+
+import edu.ies63.rcc2026_backend.enums.Role;
 import edu.ies63.rcc2026_backend.enums.TipoPost;
 
 import java.time.LocalDateTime;
@@ -19,6 +21,12 @@ public record PostResponseDTO(
     TipoPost tipoPost,
     LocalDateTime fechaCreacion,
     String linkVideo,
-    List<ImagenPostDTO> imagenes
-) {
-}
+    List<ImagenPostDTO> imagenes,
+    LocalDateTime fechaCreacion,
+    Long usuarioId,
+    String usuarioNombre,
+    String usuarioFotoPerfilUrl,
+    Role usuarioRole,
+    long likesCount,
+    boolean liked
+) {}
