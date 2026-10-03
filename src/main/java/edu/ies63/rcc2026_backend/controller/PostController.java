@@ -2,6 +2,7 @@ package edu.ies63.rcc2026_backend.controller;
 
 import edu.ies63.rcc2026_backend.dto.PostCreateDTO;
 import edu.ies63.rcc2026_backend.dto.PostResponseDTO;
+import edu.ies63.rcc2026_backend.dto.PostUpdateDTO;
 import edu.ies63.rcc2026_backend.service.PostService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
@@ -13,9 +14,14 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -57,7 +63,7 @@ public class PostController {
     return ResponseEntity.ok(postService.listarPremios(pageable, nombreONull(principal)));
   }
 
-  @PostMapping(value = "crear-post", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+  @PostMapping(value = "/crear", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   @Operation(summary = "Crear una nueva publicación")
   public ResponseEntity<PostResponseDTO> crearPost(
       @Valid @ModelAttribute PostCreateDTO request,
@@ -68,4 +74,24 @@ public class PostController {
   }
 
   // agregar endpoints para editar y eliminar
+  @PatchMapping(value = "/editar/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+  @Operation(summary = "Editar una publicación")
+  public ResponseEntity<PostResponseDTO> editarPost(
+      @PathVariable Long id,
+      @Valid @ModelAttribute PostUpdateDTO request,
+      Principal connectedUser
+  ) {
+    PostResponseDTO response = postService.editarPost(id, request, connectedUser.getName());
+    return ResponseEntity.ok(response);
+  }
+
+  @DeleteMapping("/eliminar/{id}")
+  @Operation(summary = "Eliminar una publicación")
+  public ResponseEntity<Void> eliminarPost(
+      @PathVariable Long id,
+      Principal connectedUser
+  ) {
+    postService.eliminarPost(id, connectedUser.getName());
+    return ResponseEntity.noContent().build();
+  }
 }
