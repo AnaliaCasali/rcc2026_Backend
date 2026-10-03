@@ -1,0 +1,95 @@
+name: RCC Backend CI Pipeline (Build & Test)
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  IMAGE_NAME: rcc2026-backend
+  CONTAINER_NAME: rcc_backend
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    services:
+      # 1. Base de datos aislada para pruebas unitarias/integración de Maven
+      mysql-test:
+        image: mysql:8.0
+        environment:
+          MYSQL_ROOT_PASSWORD: ${{ secrets.DB_PASS }}
+          MYSQL_DATABASE: rcc
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      # 2. Descargar el código fuente
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      # 3. Configurar entorno de ejecución Java para versión 25
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Dar permisos de ejecución a Maven Wrapper
+        run: chmod +x mvnw
+
+      # 4. Ejecutar compilación y pruebas automatizadas unificadas
+      - name: Compilar y Ejecutar Pruebas con Maven
+        run: ./mvnw clean verify
+        env:
+          SPRING_DATASOURCE_URL: jdbc:mysql://localhost:3306/rcc?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC
+          SPRING_DATASOURCE_USERNAME: root
+          SPRING_DATASOURCE_PASSWORD: ${{ secrets.DB_PASS }}
+          APP_SECURITY_JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          SPRING_MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
+
+      # 5. Configurar entorno de compilación nativo de Docker
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # 6. Orquestación y verificación en vivo usando Docker Compose
+      - name: Verificar Integración Completa con Docker Compose
+        run: |
+          # Exportamos las credenciales al entorno de la terminal para Compose (usando root para la BD de prueba)
+          export DB_USER="root"
+          export DB_PASS="${{ secrets.DB_PASS }}"
+          export JWT_SECRET="${{ secrets.JWT_SECRET }}"
+          export MAIL_PASSWORD="${{ secrets.MAIL_PASSWORD }}"
+          
+          echo "Construyendo imágenes desde el ecosistema Compose..."
+          docker compose build --no-cache
+          
+          echo "Levantando servicios en segundo plano..."
+          docker compose up -d
+          
+          echo "Esperando a que la aplicación Java y la BD inicien (20s)..."
+          sleep 20
+          
+          echo "--- Estado de los contenedores activos ---"
+          docker ps
+          
+          echo "--- Ejecutando Prueba de Humo (HTTP Smoke Test) ---"
+          # Intenta pegarle al endpoint público /api/v1/localidades.
+          curl -f http://localhost:8080/api/v1/localidades || { 
+            echo "❌ ERROR: La aplicación no responde o lanzó un fallo en el puerto 8080."; 
+            echo "--- LOGS DEL CONTENEDOR DE APLICACIÓN ---";
+            docker compose logs --tail=100 $CONTAINER_NAME;
+            exit 1; 
+          }
+          
+          echo "✅ ¡Prueba de humo superada con éxito!"
+          
+          echo "Desmantelando infraestructura de prueba..."
+          docker compose down -v

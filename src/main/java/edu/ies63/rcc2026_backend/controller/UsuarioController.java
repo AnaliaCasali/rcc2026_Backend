@@ -18,6 +18,10 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import edu.ies63.rcc2026_backend.dto.PostResponseDTO;
+import edu.ies63.rcc2026_backend.service.PostService;
+import org.springframework.data.domain.Sort;
+
 import java.security.Principal;
 
 @RestController
@@ -26,9 +30,11 @@ public class UsuarioController {
 
   // inyeccion de service de usuario
   private final UsuarioService usuarioService;
+  private final PostService postService;
 
-  public UsuarioController(UsuarioService usuarioService) {
+  public UsuarioController(UsuarioService usuarioService, PostService postService) {
     this.usuarioService = usuarioService;
+    this.postService = postService;
   }
 
   // cambiar size y sort a preferencia de pantalla sugerencias
@@ -58,5 +64,14 @@ public class UsuarioController {
   @Operation(summary = "Ver el perfil público de otro usuario o agrupación")
   public ResponseEntity<PerfilResponseDTO> verPerfilPublico(@PathVariable Long id) {
     return ResponseEntity.ok(usuarioService.verPerfilPublico(id));
+  }
+  @GetMapping("/{id}/posts")
+  @Operation(summary = "Publicaciones de un usuario (perfil), de más reciente a más antigua")
+  public ResponseEntity<Page<PostResponseDTO>> postsDeUsuario(
+      @PathVariable Long id,
+      @PageableDefault(size = 5, sort = "fechaCreacion", direction = Sort.Direction.DESC) Pageable pageable,
+      Principal principal) {
+    return ResponseEntity.ok(postService.listarPorUsuario(id, pageable,
+        principal != null ? principal.getName() : null));
   }
 }

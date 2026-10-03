@@ -130,6 +130,51 @@ class SeguidoServiceImplTest {
   }
 
   @Test
+  void toggleSeguimiento_UsuarioIndicadoEsAdmin_DebeLanzarNoEsGrupoException() {
+    // Arrange: un ADMIN tampoco debería poder ser seguido
+    Usuario admin = Usuario.builder()
+        .id(2L)
+        .role(Role.ADMIN)
+        .nombre("Admin Test")
+        .build();
+
+    when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuarioMock));
+    when(usuarioRepository.findById(2L)).thenReturn(Optional.of(admin));
+
+    // Act & Assert
+    assertThrows(
+        NoEsGrupoException.class,
+        () -> seguidoService.toggleSeguimiento(1L, 2L)
+    );
+
+    verifyNoInteractions(seguidoRepository);
+  }
+
+  @Test
+  void toggleSeguimiento_UsuarioIndicadoEsOrganizador_NoDebeLanzarExcepcionYDebeGuardar() {
+    // Arrange: fix del ticket -> un ORGANIZADOR también debe poder ser seguido
+    Usuario organizador = Usuario.builder()
+        .id(2L)
+        .role(Role.ORGANIZADOR)
+        .nombre("Organizador Test")
+        .build();
+
+    when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuarioMock));
+    when(usuarioRepository.findById(2L)).thenReturn(Optional.of(organizador));
+    when(seguidoRepository.findByUsuarioIdAndGrupoId(1L, 2L)).thenReturn(Optional.empty());
+
+    // Act
+    boolean result = seguidoService.toggleSeguimiento(1L, 2L);
+
+    // Assert
+    assertTrue(result);
+
+    ArgumentCaptor<Seguido> captor = ArgumentCaptor.forClass(Seguido.class);
+    verify(seguidoRepository, times(1)).save(captor.capture());
+    assertEquals(organizador, captor.getValue().getGrupo());
+  }
+
+  @Test
   void toggleSeguimiento_NoSeguiaAntes_DebeGuardarNuevoSeguidoYRetornarTrue() {
     // Arrange
     when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuarioMock));

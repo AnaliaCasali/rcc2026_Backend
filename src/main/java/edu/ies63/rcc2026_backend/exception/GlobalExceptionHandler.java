@@ -96,4 +96,26 @@ public class GlobalExceptionHandler {
     }
     return new ResponseEntity<>(response, status);
   }
+
+  @ExceptionHandler(BusquedaInvalidaException.class)
+  public ResponseEntity<Map<String, Object>> handleBusquedaInvalidaException(BusquedaInvalidaException ex) {
+    Map<String, Object> body = new HashMap<>();
+    body.put("status", HttpStatus.BAD_REQUEST.value());
+    body.put("error", "Bad Request");
+    body.put("message", ex.getMessage());
+    body.put("timestamp", LocalDateTime.now());
+
+    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+  }
+
+  @ExceptionHandler(PostNotFoundException.class)
+  public ResponseEntity<Map<String, Object>> handlePostNotFoundException(PostNotFoundException ex) {
+    Map<String, Object> body = new HashMap<>();
+    body.put("status", HttpStatus.NOT_FOUND.value());
+    body.put("error", "Not Found");
+    body.put("message", ex.getMessage());
+    body.put("timestamp", LocalDateTime.now());
+
+    return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body);
+  }
 }

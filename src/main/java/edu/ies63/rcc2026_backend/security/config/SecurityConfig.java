@@ -64,9 +64,17 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/v1/auth/usuarios/{id}/perfil").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/auth/usuarios/lista-usuarios").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/localidades").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/posts").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/auth/usuarios/{id}/posts").permitAll()
+
+                .requestMatchers(HttpMethod.GET, "/api/v1/posts/premios").permitAll()
+
                 .requestMatchers("/api/v1/auth/cambiarpassword").authenticated()
                 .requestMatchers("/api/v1/auth/usuarios/perfil/mi-perfil").authenticated()
-                .requestMatchers(HttpMethod.PUT, "/api/v1/auth/usuarios/perfil").authenticated()
+
+                .requestMatchers(HttpMethod.POST, "/api/v1/posts/crear").authenticated()
+                .requestMatchers(HttpMethod.PATCH, "/api/v1/posts/editar/**").authenticated()
+                .requestMatchers(HttpMethod.DELETE, "/api/v1/posts/eliminar/**").authenticated()
 
                 .requestMatchers("/api/**").authenticated()
                 .anyRequest().authenticated()

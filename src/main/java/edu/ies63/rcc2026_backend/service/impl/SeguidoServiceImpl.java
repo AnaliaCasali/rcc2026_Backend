@@ -35,7 +35,7 @@ public class SeguidoServiceImpl implements SeguidoService {
     Usuario grupo = usuarioRepository.findById(grupoId)
         .orElseThrow(() -> new GrupoNoEncontradoException(grupoId));
 
-    if (grupo.getRole() != Role.GRUPO) {
+    if (grupo.getRole() != Role.GRUPO && grupo.getRole() != Role.ORGANIZADOR) {
       throw new NoEsGrupoException(grupoId);
     }
 
