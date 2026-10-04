@@ -20,6 +20,8 @@ import lombok.extern.slf4j.Slf4j;
 import net.coobird.thumbnailator.Thumbnails;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -73,16 +75,13 @@ public class PostServiceImpl implements PostService {
         .findFirst()
         .orElse(null);
 
+    // el orden tiene que coincidir con PostResponseDTO
     return new PostResponseDTO(
         post.getId(),
-        autor.getId(),
-        autor.getUsername(),
-        autor.getNombre(),
-        fotoPerfilUrl,
         post.getTitulo(),
         post.getDescripcion(),
         post.getTipoPost(),
-         post.getLinkVideo(),
+        post.getLinkVideo(),
         imagenesDTO,
         post.getFechaCreacion(),
         autor.getNombre(),
@@ -92,7 +91,22 @@ public class PostServiceImpl implements PostService {
         liked
     );
   }
-
+  // Para devolver un solo post (por ejemplo al editar): calcula likesCount y liked
+  private PostResponseDTO toResponseDTO(Post post, String username) {
+    long likes = likeRepository.countByPost_Id(post.getId());
+    boolean liked = false;
+    if (username != null) {
+      liked = usuarioRepository.findByUsername(username)
+          .map(u -> likeRepository.existsByPost_IdAndUsuario_Id(post.getId(), u.getId()))
+          .orElse(false);
+    }
+    return toResponseDTO(post, likes, liked);
+  }
+  // Orden fijo: más reciente primero (ignora cualquier sort que mande el cliente)
+  private Pageable masRecientePrimero(Pageable p) {
+    return PageRequest.of(p.getPageNumber(), p.getPageSize(),
+        Sort.by(Sort.Direction.DESC, "fechaCreacion").and(Sort.by(Sort.Direction.DESC, "id")));
+  }
   // Convierte una página de Post a DTO sumando likesCount y liked (2 consultas para toda la página).
   // username == null (visitante) -> liked = false
   private Page<PostResponseDTO> aDto(Page<Post> posts, String username) {
@@ -116,19 +130,19 @@ public class PostServiceImpl implements PostService {
   @Override
   @Transactional(readOnly = true)
   public Page<PostResponseDTO> listarPosts(Pageable pageable, String username) {
-    return aDto(postRepository.findByTipoPost(TipoPost.POST, pageable), username);
+    return aDto(postRepository.findByTipoPost(TipoPost.POST, masRecientePrimero(pageable)), username);
   }
 
   @Override
   @Transactional(readOnly = true)
   public Page<PostResponseDTO> listarPremios(Pageable pageable, String username) {
-    return aDto(postRepository.findByTipoPost(TipoPost.PREMIO, pageable), username);
+    return aDto(postRepository.findByTipoPost(TipoPost.PREMIO, masRecientePrimero(pageable)), username);
   }
 
   @Override
   @Transactional(readOnly = true)
   public Page<PostResponseDTO> listarPorUsuario(Long usuarioId, Pageable pageable, String username) {
-    return aDto(postRepository.findByUsuarioIdAndTipoPost(usuarioId, TipoPost.POST, pageable), username);
+    return aDto(postRepository.findByUsuarioIdAndTipoPost(usuarioId, TipoPost.POST, masRecientePrimero(pageable)), username);
   }
 
   @Override
@@ -136,7 +150,7 @@ public class PostServiceImpl implements PostService {
   public Page<PostResponseDTO> listarFeed(Pageable pageable, String username) {
     Usuario usuario = usuarioRepository.findByUsername(username)
         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado"));
-    return aDto(postRepository.findFeedDeSeguidos(TipoPost.POST, usuario.getId(), pageable), username);
+    return aDto(postRepository.findFeedDeSeguidos(TipoPost.POST, usuario.getId(), masRecientePrimero(pageable)), username);
   }
 
   @Override
@@ -223,7 +237,7 @@ public class PostServiceImpl implements PostService {
     }
 
     Post postActualizado = postRepository.save(post);
-    return null; // toResponseDTO(postActualizado);
+    return toResponseDTO(postActualizado, username);
   }
 
   // (Método auxiliar añadido en tu PostServiceImpl)
