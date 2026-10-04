@@ -16,6 +16,27 @@ services:
       timeout: 5s
       retries: 10
 
+  ollama:
+    image: ollama/ollama:latest
+    container_name: rcc-ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama   # modelos persistentes
+
+  ollama-init:                       # descarga el modelo
+    image: ollama/ollama:latest
+    container_name: rcc-ollama-init
+    depends_on:
+      - ollama
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    entrypoint: ["/bin/sh", "-c"]
+    command: >
+      "sleep 5 && ollama pull qwen3:0.6b"
+    restart: "no"
+
   backend:
     build: .
     container_name: rcc-backend
@@ -24,18 +45,14 @@ services:
     environment:
       DB_HOST: db          # dentro de la red de Docker, MySQL se llama "db"
       DB_PORT: 3306
-    ports:
-      - "${APP_PORT:-8080}:8080"
-    volumes:
-      # Mapeo vital para retener las fotos subidas si el contenedor se apaga
-      - ./uploads:/app/uploads
+      OLLAMA_BASE_URL: http://ollama:11434
+      SPRING_AI_OLLAMA_CHAT_MODEL: qwen3:0.6b
     depends_on:
       db:
         condition: service_healthy
+      ollama-init:
+        condition: service_completed_successfully
 
 volumes:
   mysql_data:
-
-
-
-
+  ollama_data:
