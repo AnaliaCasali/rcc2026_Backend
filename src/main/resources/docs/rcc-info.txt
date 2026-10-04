@@ -1,0 +1,5 @@
+RCC 2026 es una red social para compartir publicaciones, premios y novedades de la comunidad.
+Para registrarte entrá a "Crear cuenta" y completá nombre, email y contraseña.
+Los roles son USUARIO, GRUPO, ORGANIZADOR y ADMIN.
+Las publicaciones pueden ser POST o PREMIO y aceptan imágenes de hasta 5 MB.
+Si olvidaste tu contraseña usá "¿Olvidaste tu contraseña?" y te llegará un email.

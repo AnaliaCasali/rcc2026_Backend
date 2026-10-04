@@ -78,11 +78,19 @@ public class GlobalExceptionHandler {
   public ResponseEntity<Map<String, Object>> handleImageProcessing(ProcesamientoImagenException ex) {
     return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Error al procesar el archivo multimedia", ex.getMessage());
   }
+  // Manejo de errores del asistente de IA (503)
+  @ExceptionHandler(ChatIAException.class)
+  public ResponseEntity<Map<String, Object>> handleChatIA(ChatIAException ex) {
+    return buildResponse(HttpStatus.SERVICE_UNAVAILABLE,
+            "El asistente de IA no está disponible", ex.getMessage());
+  }
+
   // Manejo genérico para cualquier otro error (500)
   @ExceptionHandler(Exception.class)
   public ResponseEntity<Map<String, Object>> handleGenericException(Exception ex) {
     return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Error interno del servidor", ex.getMessage());
   }
+
 
   // Método auxiliar para estructurar la respuesta del error
   private ResponseEntity<Map<String, Object>> buildResponse(HttpStatus status, String message, Object details) {
