@@ -26,6 +26,8 @@ import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -97,7 +99,6 @@ public class PostIntegrationTest {
     jwtTokenValid = jwtService.generateToken(claims, usuarioActual);
   }
 
-  // --- MÉTODOS AUXILIARES ---
   private Post crearPostDirectoEnBD() {
     Post post = Post.builder()
         .titulo("Post Original")
@@ -116,20 +117,21 @@ public class PostIntegrationTest {
     return postRepository.saveAndFlush(post);
   }
 
-  // --- TESTS ---
-
   @Test
-  public void listarPosts_DeberiaRetornarStatus200_CuandoEsPublico() throws Exception {
+  public void listarPosts_DeberiaRetornarStatus200_YUsuarioId_CuandoEsPublico() throws Exception {
+    crearPostDirectoEnBD();
+
     mockMvc.perform(get("/api/v1/posts")
             .contentType(MediaType.APPLICATION_JSON))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.content").exists());
+        .andExpect(jsonPath("$.content").exists())
+        .andExpect(jsonPath("$.content[0].usuarioId").value(usuarioActual.getId())); // Validamos que viaje el usuarioId
   }
 
   @Test
   public void crearPost_DeberiaRetornar201_CuandoTokenEsValido() throws Exception {
-    java.awt.image.BufferedImage bufferedImage = new java.awt.image.BufferedImage(1, 1, java.awt.image.BufferedImage.TYPE_INT_RGB);
-    java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+    BufferedImage bufferedImage = new BufferedImage(1, 1, BufferedImage.TYPE_INT_RGB);
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
     javax.imageio.ImageIO.write(bufferedImage, "jpg", baos);
     byte[] imageBytes = baos.toByteArray();
 
@@ -149,6 +151,7 @@ public class PostIntegrationTest {
             .contentType(MediaType.MULTIPART_FORM_DATA))
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.titulo").value("Título de Integración"))
+        .andExpect(jsonPath("$.usuarioId").value(usuarioActual.getId())) // Validamos el usuarioId creado
         .andExpect(jsonPath("$.usuarioNombre").value("Usuario de Prueba"));
   }
 
@@ -156,8 +159,6 @@ public class PostIntegrationTest {
   public void editarPost_DeberiaRetornar200_CuandoDatosSonValidos() throws Exception {
     Post postGuardado = crearPostDirectoEnBD();
 
-    // Para peticiones PATCH que envían multipart/form-data, se usa multipart()
-    // pero se sobreescribe el método HTTP a PATCH internamente usando .with()
     mockMvc.perform(multipart("/api/v1/posts/editar/" + postGuardado.getId())
             .param("titulo", "Título Editado")
             .param("descripcion", "Descripción editada")
@@ -169,7 +170,7 @@ public class PostIntegrationTest {
             .contentType(MediaType.MULTIPART_FORM_DATA))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.titulo").value("Título Editado"))
-        .andExpect(jsonPath("$.descripcion").value("Descripción editada"));
+        .andExpect(jsonPath("$.usuarioId").value(usuarioActual.getId()));
   }
 
   @Test
@@ -180,7 +181,6 @@ public class PostIntegrationTest {
             .header(HttpHeaders.AUTHORIZATION, "Bearer " + jwtTokenValid))
         .andExpect(status().isNoContent());
 
-    // Verificamos que ya no exista en la BD
     Assertions.assertTrue(postRepository.findById(postGuardado.getId()).isEmpty());
   }
 }

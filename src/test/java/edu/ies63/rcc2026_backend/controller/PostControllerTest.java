@@ -45,7 +45,7 @@ class PostControllerTest {
   void setUp() {
     postResponseMock = new PostResponseDTO(
         1L, "Título de Prueba", "Descripción", TipoPost.POST, null, List.of(),
-        LocalDateTime.now(), "usuarioTest", null, Role.USUARIO, 0, false
+        LocalDateTime.now(), 1L, "usuarioTest", null, Role.USUARIO, 0, false
     );
   }
 
