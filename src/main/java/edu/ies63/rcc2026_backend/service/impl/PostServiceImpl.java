@@ -84,6 +84,7 @@ public class PostServiceImpl implements PostService {
         post.getLinkVideo(),
         imagenesDTO,
         post.getFechaCreacion(),
+        autor.getId(),
         autor.getNombre(),
         fotoPerfilUrl,
         autor.getRole(),
