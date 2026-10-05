@@ -69,7 +69,7 @@ public class SecurityConfig {
 
                 .requestMatchers(HttpMethod.GET, "/api/v1/posts/premios").permitAll()
 
-                .requestMatchers("/api/v1/auth/cambiarpassword").authenticated()
+                .requestMatchers("/api/v1/auth/usuarios/cambiar-password").authenticated()
                 .requestMatchers("/api/v1/auth/usuarios/perfil/mi-perfil").authenticated()
 
                 .requestMatchers(HttpMethod.POST, "/api/v1/posts/crear").authenticated()

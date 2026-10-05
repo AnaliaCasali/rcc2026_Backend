@@ -29,8 +29,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
+import edu.ies63.rcc2026_backend.exception.PasswordInvalidaException;
+import edu.ies63.rcc2026_backend.exception.UsuarioNoEncontradoException;
+import edu.ies63.rcc2026_backend.security.dto.CambiarPasswordRequest;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -40,6 +44,7 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.Principal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -56,6 +61,12 @@ class UsuarioServiceImplTest {
 
   @InjectMocks
   private UsuarioServiceImpl usuarioService;
+
+  @Mock
+  private PasswordEncoder passwordEncoder;
+
+  @Mock
+  private Principal principal;
 
   private Usuario usuarioMock;
 
@@ -562,5 +573,90 @@ class UsuarioServiceImplTest {
 
     // Act & Assert
     assertThrows(UsernameNotFoundException.class, () -> usuarioService.loadUserByUsername(null));
+  }
+
+  @Test
+  void cambiarPassword_Exitoso_DebeCodificarYGuardar() {
+    // Arrange
+    CambiarPasswordRequest request = new CambiarPasswordRequest(
+            "PasswordActual123!",
+            "NuevaPassword123!",
+            "NuevaPassword123!"
+    );
+    when(principal.getName()).thenReturn("test@test.com");
+    when(usuarioRepository.findByUsername("test@test.com")).thenReturn(Optional.of(usuarioMock));
+    when(passwordEncoder.matches("PasswordActual123!", usuarioMock.getPassword())).thenReturn(true);
+    when(passwordEncoder.matches("NuevaPassword123!", usuarioMock.getPassword())).thenReturn(false);
+    when(passwordEncoder.encode("NuevaPassword123!")).thenReturn("nuevaCodificada");
+    when(usuarioRepository.save(any(Usuario.class))).thenReturn(usuarioMock);
+
+    // Act
+    usuarioService.cambiarPassword(request, principal);
+
+    // Assert
+    assertEquals("nuevaCodificada", usuarioMock.getPassword());
+    verify(usuarioRepository, times(1)).save(usuarioMock);
+  }
+
+  @Test
+  void cambiarPassword_UsuarioNoExiste_DebeLanzarUsuarioNoEncontradoException() {
+    // Arrange
+    CambiarPasswordRequest request = new CambiarPasswordRequest("actual", "nueva", "nueva");
+    when(principal.getName()).thenReturn("noexiste@test.com");
+    when(usuarioRepository.findByUsername("noexiste@test.com")).thenReturn(Optional.empty());
+
+    // Act & Assert
+    assertThrows(UsuarioNoEncontradoException.class, () ->
+            usuarioService.cambiarPassword(request, principal)
+    );
+    verify(usuarioRepository, never()).save(any());
+  }
+
+  @Test
+  void cambiarPassword_PasswordActualIncorrecta_DebeLanzarPasswordInvalidaException() {
+    // Arrange
+    CambiarPasswordRequest request = new CambiarPasswordRequest("incorrecta", "nueva123", "nueva123");
+    when(principal.getName()).thenReturn("test@test.com");
+    when(usuarioRepository.findByUsername("test@test.com")).thenReturn(Optional.of(usuarioMock));
+    when(passwordEncoder.matches("incorrecta", usuarioMock.getPassword())).thenReturn(false);
+
+    // Act & Assert
+    PasswordInvalidaException ex = assertThrows(PasswordInvalidaException.class, () ->
+            usuarioService.cambiarPassword(request, principal)
+    );
+    assertEquals("La contraseña actual es incorrecta", ex.getMessage());
+    verify(usuarioRepository, never()).save(any());
+  }
+
+  @Test
+  void cambiarPassword_ConfirmacionNoCoincide_DebeLanzarPasswordInvalidaException() {
+    // Arrange
+    CambiarPasswordRequest request = new CambiarPasswordRequest("PasswordActual123!", "nueva123", "distinta123");
+    when(principal.getName()).thenReturn("test@test.com");
+    when(usuarioRepository.findByUsername("test@test.com")).thenReturn(Optional.of(usuarioMock));
+    when(passwordEncoder.matches("PasswordActual123!", usuarioMock.getPassword())).thenReturn(true);
+
+    // Act & Assert
+    PasswordInvalidaException ex = assertThrows(PasswordInvalidaException.class, () ->
+            usuarioService.cambiarPassword(request, principal)
+    );
+    assertEquals("Las nuevas contraseñas no coinciden", ex.getMessage());
+    verify(usuarioRepository, never()).save(any());
+  }
+
+  @Test
+  void cambiarPassword_NuevaIgualALaAnterior_DebeLanzarPasswordInvalidaException() {
+    // Arrange
+    CambiarPasswordRequest request = new CambiarPasswordRequest("PasswordActual123!", "PasswordActual123!", "PasswordActual123!");
+    when(principal.getName()).thenReturn("test@test.com");
+    when(usuarioRepository.findByUsername("test@test.com")).thenReturn(Optional.of(usuarioMock));
+    when(passwordEncoder.matches("PasswordActual123!", usuarioMock.getPassword())).thenReturn(true);
+
+    // Act & Assert
+    PasswordInvalidaException ex = assertThrows(PasswordInvalidaException.class, () ->
+            usuarioService.cambiarPassword(request, principal)
+    );
+    assertEquals("La nueva contraseña no puede ser igual a la anterior", ex.getMessage());
+    verify(usuarioRepository, never()).save(any());
   }
 }

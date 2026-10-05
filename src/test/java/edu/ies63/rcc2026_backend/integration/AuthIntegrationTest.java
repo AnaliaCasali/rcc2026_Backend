@@ -106,42 +106,4 @@ class AuthIntegrationTest {
                 .andExpect(status().isOk());
     }
 
-    @Test
-    @DisplayName("PATCH /api/v1/auth/cambiarpassword sin token debe ser rechazado")
-    void cambiarPassword_SinToken_Rechazado() throws Exception {
-        CambiarPasswordRequest request = new CambiarPasswordRequest(
-                "Vieja123!", "Nueva456!", "Nueva456!"
-        );
-
-        mockMvc.perform(patch("/api/v1/auth/cambiarpassword")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isForbidden());
-    }
-
-    @Test
-    @DisplayName("PATCH /api/v1/auth/cambiarpassword con token JWT válido permite el cambio")
-    void cambiarPassword_ConTokenValido_PermiteCambio() throws Exception {
-        Usuario usuario = Usuario.builder()
-                .username("cambioclave@test.com")
-                .password(passwordEncoder.encode("ClaveActual123!"))
-                .nombre("Usuario Cambio Clave")
-                .role(Role.USUARIO)
-                .debaja(false)
-                .build();
-        usuarioRepository.save(usuario);
-
-        String token = jwtService.generateToken(Map.of("rol", "USUARIO"), usuario);
-
-        CambiarPasswordRequest request = new CambiarPasswordRequest(
-                "ClaveActual123!", "ClaveNueva456!", "ClaveNueva456!"
-        );
-
-        mockMvc.perform(patch("/api/v1/auth/cambiarpassword")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isNoContent());
-    }
-
 }

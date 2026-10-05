@@ -9,6 +9,7 @@ import edu.ies63.rcc2026_backend.model.Localidad;
 import edu.ies63.rcc2026_backend.model.Usuario;
 import edu.ies63.rcc2026_backend.repository.LocalidadRepository;
 import edu.ies63.rcc2026_backend.repository.UsuarioRepository;
+import edu.ies63.rcc2026_backend.security.dto.CambiarPasswordRequest;
 import edu.ies63.rcc2026_backend.security.jwt.JwtService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -64,6 +65,9 @@ class UsuarioIntegrationTest {
 
   @Autowired
   private JwtService jwtService;
+
+  @Autowired
+  private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
   // Instancia directa para evitar errores de inyección
   private final ObjectMapper objectMapper = new ObjectMapper();
@@ -154,5 +158,67 @@ class UsuarioIntegrationTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.nombre", is("Nombre Nuevo")))
         .andExpect(jsonPath("$.biografia", is("Bio actualizada")));
+  }
+
+  @Test
+  void debeCambiarPasswordCorrectamente() throws Exception {
+    Usuario usuario = Usuario.builder()
+            .username("cambiopass@test.com")
+            .password(passwordEncoder.encode("PasswordVieja123!"))
+            .nombre("Usuario Pass")
+            .role(Role.USUARIO)
+            .localidad(localidadTest)
+            .imagenesPerfil(new java.util.ArrayList<>())
+            .redes(new java.util.ArrayList<>())
+            .build();
+    usuarioRepository.saveAndFlush(usuario);
+
+    String token = jwtService.generateToken(Map.of("rol", "USUARIO"), usuario);
+
+    CambiarPasswordRequest request = new CambiarPasswordRequest(
+            "PasswordVieja123!",
+            "PasswordNueva456!",
+            "PasswordNueva456!"
+    );
+
+    mockMvc.perform(patch("/api/v1/auth/usuarios/cambiar-password")
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isNoContent());
+
+    Usuario usuarioActualizado = usuarioRepository.findByUsername("cambiopass@test.com").orElseThrow();
+    org.junit.jupiter.api.Assertions.assertTrue(
+            passwordEncoder.matches("PasswordNueva456!", usuarioActualizado.getPassword())
+    );
+  }
+
+  @Test
+  void debeFallarCambioPasswordSiContraseniaActualEsIncorrecta() throws Exception {
+    Usuario usuario = Usuario.builder()
+            .username("fallopass@test.com")
+            .password(passwordEncoder.encode("PasswordCorrecta123!"))
+            .nombre("Usuario Error Pass")
+            .role(Role.USUARIO)
+            .localidad(localidadTest)
+            .imagenesPerfil(new java.util.ArrayList<>())
+            .redes(new java.util.ArrayList<>())
+            .build();
+    usuarioRepository.saveAndFlush(usuario);
+
+    String token = jwtService.generateToken(Map.of("rol", "USUARIO"), usuario);
+
+    CambiarPasswordRequest request = new CambiarPasswordRequest(
+            "PasswordErronea123!",
+            "PasswordNueva456!",
+            "PasswordNueva456!"
+    );
+
+    mockMvc.perform(patch("/api/v1/auth/usuarios/cambiar-password")
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.details", is("La contraseña actual es incorrecta")));
   }
 }
