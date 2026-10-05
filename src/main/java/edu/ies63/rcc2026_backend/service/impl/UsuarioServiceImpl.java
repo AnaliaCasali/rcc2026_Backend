@@ -7,20 +7,25 @@ import edu.ies63.rcc2026_backend.dto.RedSocialResponseDTO;
 import edu.ies63.rcc2026_backend.dto.UsuarioResponseDTO;
 import edu.ies63.rcc2026_backend.enums.Plataforma;
 import edu.ies63.rcc2026_backend.enums.TipoImagen;
+import edu.ies63.rcc2026_backend.exception.PasswordInvalidaException;
 import edu.ies63.rcc2026_backend.exception.ProcesamientoImagenException;
+import edu.ies63.rcc2026_backend.exception.UsuarioNoEncontradoException;
 import edu.ies63.rcc2026_backend.model.ImagenPerfil;
 import edu.ies63.rcc2026_backend.model.RedSocial;
 import edu.ies63.rcc2026_backend.model.Usuario;
 import edu.ies63.rcc2026_backend.repository.UsuarioRepository;
+import edu.ies63.rcc2026_backend.security.dto.CambiarPasswordRequest;
 import edu.ies63.rcc2026_backend.service.UsuarioService;
 import lombok.extern.slf4j.Slf4j;
 import net.coobird.thumbnailator.Thumbnails;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -30,6 +35,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.Principal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -38,11 +44,13 @@ import java.util.UUID;
 @Slf4j
 public class UsuarioServiceImpl implements UsuarioService, UserDetailsService {
   private final UsuarioRepository usuarioRepository;
+  private final PasswordEncoder passwordEncoder;
   private final String UPLOAD_DIR = "uploads/perfiles/";
   private static final List<String> TIPOS_PERMITIDOS = List.of("image/jpeg", "image/png", "image/webp");
 
-  public UsuarioServiceImpl(UsuarioRepository usuarioRepository) {
+  public UsuarioServiceImpl(UsuarioRepository usuarioRepository, @Lazy PasswordEncoder passwordEncoder) {
     this.usuarioRepository = usuarioRepository;
+      this.passwordEncoder = passwordEncoder;
   }
 
   private UsuarioResponseDTO toResponseDTO(Usuario usuario) {
@@ -270,5 +278,33 @@ public class UsuarioServiceImpl implements UsuarioService, UserDetailsService {
     return usuarioRepository.findByUsername(username)
         .orElseThrow(() ->
             new UsernameNotFoundException("Usuario no encontrado: " + username));
+  }
+
+  @Override
+  @Transactional
+  public void cambiarPassword(CambiarPasswordRequest request, Principal connectedUser) {
+    String username = connectedUser.getName();
+
+    Usuario usuario = usuarioRepository.findByUsername(username)
+            .orElseThrow(() -> new UsuarioNoEncontradoException("No se encontró el usuario: " + username));
+
+    // 1. Verificar si la contraseña actual ingresada coincide con la de la base de datos
+    if (!passwordEncoder.matches(request.currentPassword(), usuario.getPassword())) { // O getPasswordActual() según tu DTO
+      throw new PasswordInvalidaException("La contraseña actual es incorrecta");
+    }
+
+    // 2. Verificar que la nueva contraseña y su confirmación coincidan
+    if (!request.newPassword().equals(request.confirmationPassword())) {
+      throw new PasswordInvalidaException("Las nuevas contraseñas no coinciden");
+    }
+
+    // 3. (Opcional) Verificar que la nueva no sea idéntica a la anterior
+    if (passwordEncoder.matches(request.newPassword(), usuario.getPassword())) {
+      throw new PasswordInvalidaException("La nueva contraseña no puede ser igual a la anterior");
+    }
+
+    // 4. Encriptar y persistir la nueva contraseña
+    usuario.setPassword(passwordEncoder.encode(request.newPassword()));
+    usuarioRepository.save(usuario);
   }
 }

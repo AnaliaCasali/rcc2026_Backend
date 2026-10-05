@@ -3,6 +3,7 @@ package edu.ies63.rcc2026_backend.controller;
 import edu.ies63.rcc2026_backend.dto.PerfilResponseDTO;
 import edu.ies63.rcc2026_backend.dto.PerfilUpdateDTO;
 import edu.ies63.rcc2026_backend.dto.UsuarioResponseDTO;
+import edu.ies63.rcc2026_backend.security.dto.CambiarPasswordRequest;
 import edu.ies63.rcc2026_backend.service.UsuarioService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
@@ -11,12 +12,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import edu.ies63.rcc2026_backend.dto.PostResponseDTO;
 import edu.ies63.rcc2026_backend.service.PostService;
@@ -73,5 +69,15 @@ public class UsuarioController {
       Principal principal) {
     return ResponseEntity.ok(postService.listarPorUsuario(id, pageable,
         principal != null ? principal.getName() : null));
+  }
+
+  @PatchMapping("/cambiar-password")
+  @Operation(summary = "Cambiar la contraseña del usuario autenticado")
+  public ResponseEntity<Void> cambiarPassword(
+          @Valid @RequestBody CambiarPasswordRequest request,
+          Principal connectedUser
+  ) {
+    usuarioService.cambiarPassword(request, connectedUser);
+    return ResponseEntity.noContent().build();
   }
 }

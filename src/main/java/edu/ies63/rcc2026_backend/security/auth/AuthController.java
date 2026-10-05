@@ -27,16 +27,6 @@ public class AuthController {
     return ResponseEntity.ok(authService.authenticate(request));
   }
 
-  @PatchMapping("/cambiarpassword")
-  @Operation(summary = "Cambiar la contraseña del usuario autenticado")
-  public ResponseEntity<Void> cambiarPassword(
-      @Valid @RequestBody CambiarPasswordRequest request,
-      Principal connectedUser
-  ) {
-    authService.cambiarPassword(request, connectedUser);
-    return ResponseEntity.noContent().build();
-  }
-
   /*
       @PostMapping("/register")
       @Operation(summary = "Registrar nuevo usuario")

@@ -60,23 +60,6 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.token").value("mocked-jwt-token"));
     }
 
-    @Test
-    @DisplayName("PATCH /api/v1/auth/cambiarpassword responde 204 No Content")
-    void cambiarPassword_Exito() throws Exception {
-        CambiarPasswordRequest request = new CambiarPasswordRequest(
-                "PassActual123",
-                "PassNueva456",
-                "PassNueva456"
-        );
-
-        doNothing().when(authService).cambiarPassword(eq(request), any(Principal.class));
-
-        mockMvc.perform(patch("/api/v1/auth/cambiarpassword")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request))
-                        .principal(() -> "usuario@ejemplo.com"))
-                .andExpect(status().isNoContent());
-    }
 
     @Test
     @DisplayName("POST /api/v1/auth/register/usuario responde 201 Created")

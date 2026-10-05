@@ -65,29 +65,6 @@ public class AuthService {
 
   }
 
-
-  @Transactional
-  public void cambiarPassword(CambiarPasswordRequest request, Principal connectedUser) {
-    Usuario user = userRepository.findByUsername(connectedUser.getName())
-        .orElseThrow(() -> new ResponseStatusException(
-            HttpStatus.NOT_FOUND,
-            "Usuario no encontrado"
-        ));
-
-    if (!passwordEncoder.matches(request.currentPassword(), user.getPassword())) {
-      throw new PasswordInvalidaException("La contraseña actual no es correcta");
-    }
-    if (!request.newPassword().equals(request.confirmationPassword())) {
-      throw new PasswordInvalidaException("La nueva contraseña y su confirmación no coinciden");
-    }
-    if (passwordEncoder.matches(request.newPassword(), user.getPassword())) {
-      throw new PasswordInvalidaException("La nueva contraseña no puede ser igual a la actual");
-    }
-
-    user.setPassword(passwordEncoder.encode(request.newPassword()));
-    userRepository.save(user);
-  }
-
   @Transactional
   public AuthResponse registerUsuario(UsuarioCreateDTO request) {
     validarUsernameDisponible(request.username());

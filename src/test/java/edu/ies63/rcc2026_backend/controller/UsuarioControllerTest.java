@@ -4,6 +4,7 @@ import edu.ies63.rcc2026_backend.dto.PerfilResponseDTO;
 import edu.ies63.rcc2026_backend.dto.PerfilUpdateDTO;
 import edu.ies63.rcc2026_backend.dto.UsuarioResponseDTO;
 import edu.ies63.rcc2026_backend.enums.Role;
+import edu.ies63.rcc2026_backend.security.dto.CambiarPasswordRequest;
 import edu.ies63.rcc2026_backend.service.UsuarioService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -114,5 +115,23 @@ class UsuarioControllerTest {
     assertEquals(HttpStatus.OK, response.getStatusCode());
     assertEquals(userId, response.getBody().id());
     verify(usuarioService, times(1)).verPerfilPublico(userId);
+  }
+
+  @Test
+  void cambiarPassword_DebeRetornarNoContentYDelegarEnService() {
+    // Arrange
+    CambiarPasswordRequest request = new CambiarPasswordRequest(
+            "PasswordActual123!",
+            "PasswordNueva123!",
+            "PasswordNueva123!"
+    );
+    doNothing().when(usuarioService).cambiarPassword(request, principal);
+
+    // Act
+    ResponseEntity<Void> response = usuarioController.cambiarPassword(request, principal);
+
+    // Assert
+    assertEquals(HttpStatus.NO_CONTENT, response.getStatusCode());
+    verify(usuarioService, times(1)).cambiarPassword(request, principal);
   }
 }
