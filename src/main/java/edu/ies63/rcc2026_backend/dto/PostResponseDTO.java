@@ -14,6 +14,7 @@ public record PostResponseDTO(
     String linkVideo,
     List<ImagenPostDTO> imagenes,
     LocalDateTime fechaCreacion,
+    Long usuarioId,
     String usuarioNombre,
     String usuarioFotoPerfilUrl,
     Role usuarioRole,
