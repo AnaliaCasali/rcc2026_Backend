@@ -28,7 +28,7 @@ public record EventoCrearRequestDTO(
         @Size(max = 150, message = "La dirección no puede superar los 150 caracteres")
         String direccion,
 
-        @NotNull(message = "Debes invitar al menos un artista o grupo")
-        @Size(min = 1, max = 20, message = "Debes invitar al menos un artista o grupo")
+        @NotNull(message = "Debes seleccionar una agrupación artística para enviar la invitación")
+        @Size(min = 1, max = 20, message = "Debes seleccionar una agrupación artística para enviar la invitación")
         List<Long> artistaIds
 ) {}

@@ -33,4 +33,7 @@ public class Notificacion {
     @CreationTimestamp
     @Column(name = "fecha_creacion", updatable = false)
     private LocalDateTime fechaCreacion;
+
+    @Column(name = "evento_id")
+    private Long eventoId;
 }
