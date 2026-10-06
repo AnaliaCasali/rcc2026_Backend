@@ -11,6 +11,7 @@ public interface PostService {
   Page<PostResponseDTO> listarPremios(Pageable pageable, String username);
   Page<PostResponseDTO> listarPorUsuario(Long usuarioId, Pageable pageable, String username);
   Page<PostResponseDTO> listarFeed(Pageable pageable, String username);
+  Page<PostResponseDTO> listarPremiosPorUsuario(Long usuarioId, Pageable pageable, String username);
 
   PostResponseDTO crearPost(PostCreateDTO request, String username);
   PostResponseDTO editarPost(Long id, PostUpdateDTO request, String username);

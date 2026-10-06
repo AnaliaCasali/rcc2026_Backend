@@ -71,6 +71,16 @@ public class UsuarioController {
         principal != null ? principal.getName() : null));
   }
 
+  @GetMapping("/{id}/premios")
+  @Operation(summary = "Premios de un usuario (perfil), de más reciente a más antigua")
+  public ResponseEntity<Page<PostResponseDTO>> premiosDeUsuario(
+      @PathVariable Long id,
+      @PageableDefault(size = 5, sort = "fechaCreacion", direction = Sort.Direction.DESC) Pageable pageable,
+      Principal principal) {
+    return ResponseEntity.ok(postService.listarPremiosPorUsuario(id, pageable,
+        principal != null ? principal.getName() : null));
+  }
+
   @PatchMapping("/cambiar-password")
   @Operation(summary = "Cambiar la contraseña del usuario autenticado")
   public ResponseEntity<Void> cambiarPassword(
