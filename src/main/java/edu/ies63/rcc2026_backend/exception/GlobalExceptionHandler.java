@@ -11,6 +11,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 @RestControllerAdvice
@@ -117,5 +118,16 @@ public class GlobalExceptionHandler {
     body.put("timestamp", LocalDateTime.now());
 
     return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body);
+  }
+
+  @ExceptionHandler(EventoConflictException.class)
+  public ResponseEntity<Map<String, Object>> handleEventoConflict(EventoConflictException ex) {
+    Map<String, Object> response = new LinkedHashMap<>();
+    response.put("timestamp", LocalDateTime.now());
+    response.put("status", HttpStatus.CONFLICT.value());
+    response.put("error", HttpStatus.CONFLICT.getReasonPhrase());
+    response.put("message", ex.getMessage());
+    response.put("details", ex.getDetails());
+    return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
   }
 }
