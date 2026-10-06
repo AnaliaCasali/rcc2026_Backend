@@ -115,6 +115,7 @@ public class GlobalExceptionHandler {
     return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
   }
 
+
   @ExceptionHandler(PostNotFoundException.class)
   public ResponseEntity<Map<String, Object>> handlePostNotFoundException(PostNotFoundException ex) {
     Map<String, Object> body = new HashMap<>();
@@ -135,5 +136,9 @@ public class GlobalExceptionHandler {
     response.put("message", ex.getMessage());
     response.put("details", ex.getDetails());
     return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+  }
+  @ExceptionHandler(EventoNoPermitidoException.class)
+  public ResponseEntity<Map<String, Object>> handleEventoNoPermitido(EventoNoPermitidoException ex) {
+    return buildResponse(HttpStatus.FORBIDDEN, ex.getMessage(), null);
   }
 }
