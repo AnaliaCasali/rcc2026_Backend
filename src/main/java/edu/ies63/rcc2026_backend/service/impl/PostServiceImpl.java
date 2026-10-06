@@ -155,6 +155,12 @@ public class PostServiceImpl implements PostService {
   }
 
   @Override
+  @Transactional(readOnly = true)
+  public Page<PostResponseDTO> listarPremiosPorUsuario(Long usuarioId, Pageable pageable, String username) {
+    return aDto(postRepository.findByUsuarioIdAndTipoPost(usuarioId, TipoPost.PREMIO, masRecientePrimero(pageable)), username);
+  }
+
+  @Override
   @Transactional
   public PostResponseDTO crearPost(PostCreateDTO request, String username) {
     Usuario usuario = usuarioRepository.findByUsername(username)
