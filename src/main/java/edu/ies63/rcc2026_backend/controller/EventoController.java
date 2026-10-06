@@ -16,6 +16,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/eventos")
@@ -65,5 +66,14 @@ public class EventoController {
             Principal principal) {
         EventoResponseDTO actualizado = eventoService.editarEvento(id, request, principal.getName());
         return ResponseEntity.ok(actualizado);
+    }
+
+    @GetMapping("/calendario")
+    @Operation(summary = "Consultar eventos confirmados organizados por mes y año")
+    public ResponseEntity<List<EventoResponseDTO>> listarEventosPorMes(
+            @RequestParam int anio,
+            @RequestParam int mes) {
+        List<EventoResponseDTO> eventos = eventoService.listarEventosPorMesYAno(anio, mes);
+        return ResponseEntity.ok(eventos);
     }
 }

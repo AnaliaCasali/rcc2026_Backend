@@ -25,6 +25,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -170,5 +172,51 @@ public class EventoServiceImpl implements EventoService {
 
         Evento guardado = eventoRepository.save(evento);
         return mapearADTO(guardado);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<EventoResponseDTO> listarEventosPorMesYAno(int anio, int mes) {
+        YearMonth yearMonth = YearMonth.of(anio, mes);
+        LocalDate inicioMes = yearMonth.atDay(1);
+        LocalDate finMes = yearMonth.atEndOfMonth();
+
+        List<Evento> eventos = eventoRepository.findByEstadoAndFechaEventoBetween(
+                EstadoEvento.PUBLICADO,
+                inicioMes,
+                finMes
+        );
+
+        return eventos.stream()
+                .map(this::mapearADTOConArtistasConfirmados)
+                .toList();
+    }
+
+    private EventoResponseDTO mapearADTOConArtistasConfirmados(Evento e) {
+        // Filtrar solo los artistas confirmados para la visualización del usuario
+        List<ArtistaInvitadoDTO> artistasConfirmados = e.getGrupos().stream()
+                .filter(GrupoEvento::getConfirmado)
+                .map(g -> new ArtistaInvitadoDTO(
+                        g.getArtista().getId(),
+                        g.getArtista().getNombre(),
+                        g.getArtista().getUsername(),
+                        g.getConfirmado()
+                ))
+                .toList();
+
+        return new EventoResponseDTO(
+                e.getId(),
+                e.getNombre(),
+                e.getDescripcion(),
+                e.getFechaEvento(),
+                e.getHoraEvento(),
+                e.getUbicacion(),
+                e.getLocalidad().getLocalidad() + ", " + e.getLocalidad().getProvincia(),
+                e.getOrganizador().getNombre(),
+                e.getOrganizador().getId(),
+                e.getEstado(),
+                e.getFechaPublic(),
+                artistasConfirmados
+        );
     }
 }
