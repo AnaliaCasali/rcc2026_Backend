@@ -274,8 +274,9 @@ public class EventoServiceImpl implements EventoService {
         Evento e = eventoRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "El evento no existe"));
 
-        boolean esOrg = e.getOrganizador().getUsername().equals(usernameActual);
-        boolean esInvitado = e.getGrupos().stream().anyMatch(g -> g.getArtista().getUsername().equals(usernameActual));
+        boolean esOrg = usernameActual != null && e.getOrganizador().getUsername().equals(usernameActual);
+        boolean esInvitado = usernameActual != null && e.getGrupos().stream()
+                .anyMatch(g -> g.getArtista().getUsername().equals(usernameActual));
 
         if (e.getEstado() == EstadoEvento.PENDIENTE && !esOrg && !esInvitado) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "El evento no existe");
@@ -346,7 +347,7 @@ public class EventoServiceImpl implements EventoService {
     }
 
     private EventoDetalleResponseDTO mapearADetalleResponse(Evento e, String usernameActual) {
-        boolean esOrg = e.getOrganizador().getUsername().equals(usernameActual);
+        boolean esOrg = usernameActual != null && e.getOrganizador().getUsername().equals(usernameActual);
         LocalDate hoy = LocalDate.now(ZONA_ARG);
         LocalDateTime ahora = LocalDateTime.now(ZONA_ARG);
         LocalDateTime fechaHora = LocalDateTime.of(e.getFecha(), e.getHora());

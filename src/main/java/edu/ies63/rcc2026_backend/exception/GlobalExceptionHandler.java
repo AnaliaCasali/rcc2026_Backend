@@ -3,6 +3,7 @@ package edu.ies63.rcc2026_backend.exception;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -83,6 +84,11 @@ public class GlobalExceptionHandler {
   @ExceptionHandler(Exception.class)
   public ResponseEntity<Map<String, Object>> handleGenericException(Exception ex) {
     return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Error interno del servidor", ex.getMessage());
+  }
+
+  @ExceptionHandler(BadCredentialsException.class)
+  public ResponseEntity<Map<String, Object>> handleBadCredentials(BadCredentialsException ex) {
+    return buildResponse(HttpStatus.UNAUTHORIZED, "Credenciales incorrectas", null);
   }
 
   // Método auxiliar para estructurar la respuesta del error
