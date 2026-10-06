@@ -68,6 +68,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/v1/auth/usuarios/{id}/posts").permitAll()
 
                 .requestMatchers(HttpMethod.GET, "/api/v1/posts/premios").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/eventos").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/eventos/{id:[0-9]+}").permitAll()
 
                 .requestMatchers("/api/v1/auth/usuarios/cambiar-password").authenticated()
                 .requestMatchers("/api/v1/auth/usuarios/perfil/mi-perfil").authenticated()
@@ -75,6 +77,11 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/v1/posts/crear").authenticated()
                 .requestMatchers(HttpMethod.PATCH, "/api/v1/posts/editar/**").authenticated()
                 .requestMatchers(HttpMethod.DELETE, "/api/v1/posts/eliminar/**").authenticated()
+
+                .requestMatchers("/api/v1/eventos/mis-invitaciones").authenticated()
+                .requestMatchers("/api/v1/eventos/invitaciones/**").authenticated()
+                .requestMatchers("/api/v1/eventos/crear").authenticated()
+                .requestMatchers("/api/v1/eventos/editar/**").authenticated()
 
                 .requestMatchers("/api/**").authenticated()
                 .anyRequest().authenticated()
