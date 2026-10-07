@@ -4,6 +4,7 @@ import edu.ies63.rcc2026_backend.dto.*;
 import edu.ies63.rcc2026_backend.enums.EstadoEvento;
 import edu.ies63.rcc2026_backend.enums.EstadoInvitacion;
 import edu.ies63.rcc2026_backend.enums.Role;
+import edu.ies63.rcc2026_backend.enums.TipoImagen;
 import edu.ies63.rcc2026_backend.exception.EventoConflictException;
 import edu.ies63.rcc2026_backend.exception.EventoNoPermitidoException;
 import edu.ies63.rcc2026_backend.exception.UsuarioNoEncontradoException;
@@ -97,7 +98,6 @@ public class EventoServiceImpl implements EventoService {
 
         Evento guardado = eventoRepository.save(evento);
 
-        // las notificaciones se crean después de guardar, para tener el id del evento
         for (Usuario artista : artistas) {
             if (!artista.getId().equals(creador.getId())) {
                 notificacionRepository.save(Notificacion.builder()
@@ -197,30 +197,41 @@ public class EventoServiceImpl implements EventoService {
             }
         }
 
-        if (req.agregarArtistaIds() != null) {
+        if (req.agregarArtistaIds() != null && !req.agregarArtistaIds().isEmpty()) {
+            int artistasActuales = evento.getGrupos().size();
+            long nuevosUnicos = req.agregarArtistaIds().stream()
+                    .filter(aId -> !grupoEventoRepository.existsByEvento_IdAndArtista_Id(evento.getId(), aId))
+                    .distinct()
+                    .count();
+
+            if (artistasActuales + nuevosUnicos > 20) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El evento no puede superar el límite de 20 agrupaciones/artistas");
+            }
+
             for (Long aId : req.agregarArtistaIds()) {
                 if (grupoEventoRepository.existsByEvento_IdAndArtista_Id(evento.getId(), aId)) {
                     continue;
                 }
                 Usuario artista = usuarioRepository.findById(aId)
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Artista no encontrado"));
-                if (artista.getRole() != Role.GRUPO) {
-                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Solo se puede invitar a grupos o artistas");
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Artista no encontrado con ID: " + aId));
+
+                if (!"GRUPO".equals(artista.getRole().name())) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Solo se pueden agregar usuarios con rol GRUPO");
                 }
+
                 GrupoEvento nuevo = GrupoEvento.builder()
-                    .evento(evento)
-                    .artista(artista)
-                    .estadoInvitacion(EstadoInvitacion.PENDIENTE)
-                    .confirmado(false)
-                    .build();
+                        .evento(evento)
+                        .artista(artista)
+                        .estadoInvitacion(EstadoInvitacion.PENDIENTE)
+                        .confirmado(false)
+                        .build();
                 evento.getGrupos().add(nuevo);
                 grupoEventoRepository.save(nuevo);
 
                 notificacionRepository.save(Notificacion.builder()
-                    .perfil(artista)
-                    .eventoId(evento.getId())   // <-- NUEVO
-                    .mensaje("Has sido invitado al evento '" + evento.getNombre() + "'.")
-                    .build());
+                        .perfil(artista)
+                        .mensaje("Has sido invitado al evento '" + evento.getNombre() + "'.")
+                        .build());
             }
         }
 
@@ -241,7 +252,7 @@ public class EventoServiceImpl implements EventoService {
             for (GrupoEvento g : activos) {
                 notificacionRepository.save(Notificacion.builder()
                     .perfil(g.getArtista())
-                    .eventoId(guardado.getId())   // <-- NUEVO
+                    .eventoId(guardado.getId())
                     .mensaje("Se modificaron datos del evento '" + guardado.getNombre() + "': " + String.join(", ", camposModificados))
                     .build());
             }
@@ -384,7 +395,7 @@ public class EventoServiceImpl implements EventoService {
                         g.getId(),
                         g.getArtista().getId(),
                         g.getArtista().getNombre(),
-                        null,
+                        obtenerFotoPerfilUrl(g.getArtista()),
                         g.getEstadoInvitacion()
                 ))
                 .toList();
@@ -398,9 +409,21 @@ public class EventoServiceImpl implements EventoService {
                 new LocalidadSimpleDTO(e.getLocalidad().getId(), e.getLocalidad().getLocalidad()),
                 e.getDireccion(),
                 e.getEstado(),
-                new OrganizadorSimpleDTO(e.getOrganizador().getId(), e.getOrganizador().getNombre(), null),
+                new OrganizadorSimpleDTO(e.getOrganizador().getId(), e.getOrganizador().getNombre(), obtenerFotoPerfilUrl(e.getOrganizador())),
                 artistas,
                 permisos
         );
+    }
+
+    private String obtenerFotoPerfilUrl(Usuario usuario) {
+        if (usuario == null || usuario.getImagenesPerfil() == null || usuario.getImagenesPerfil().isEmpty()) {
+            return null;
+        }
+
+        return usuario.getImagenesPerfil().stream()
+                .filter(img -> img.getTipoImagen() == TipoImagen.FOTOPERFIL)
+                .map(ImagenPerfil::getUrl)
+                .findFirst()
+                .orElse(null);
     }
 }
