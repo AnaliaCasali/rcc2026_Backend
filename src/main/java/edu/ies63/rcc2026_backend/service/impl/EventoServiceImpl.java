@@ -12,6 +12,8 @@ import edu.ies63.rcc2026_backend.model.*;
 import edu.ies63.rcc2026_backend.repository.*;
 import edu.ies63.rcc2026_backend.service.EventoService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -86,12 +88,12 @@ public class EventoServiceImpl implements EventoService {
             boolean esElCreador = artista.getId().equals(creador.getId());
 
             GrupoEvento ge = GrupoEvento.builder()
-                .evento(evento)
-                .artista(artista)
-                .estadoInvitacion(esElCreador ? EstadoInvitacion.ACEPTADA : EstadoInvitacion.PENDIENTE)
-                .confirmado(esElCreador)
-                .fechaRespuesta(esElCreador ? LocalDateTime.now(ZONA_ARG) : null)
-                .build();
+                    .evento(evento)
+                    .artista(artista)
+                    .estadoInvitacion(esElCreador ? EstadoInvitacion.ACEPTADA : EstadoInvitacion.PENDIENTE)
+                    .confirmado(esElCreador)
+                    .fechaRespuesta(esElCreador ? LocalDateTime.now(ZONA_ARG) : null)
+                    .build();
 
             evento.getGrupos().add(ge);
         }
@@ -101,11 +103,11 @@ public class EventoServiceImpl implements EventoService {
         for (Usuario artista : artistas) {
             if (!artista.getId().equals(creador.getId())) {
                 notificacionRepository.save(Notificacion.builder()
-                    .perfil(artista)
-                    .eventoId(guardado.getId())
-                    .mensaje("Has sido invitado al evento '" + guardado.getNombre() + "' el día " + guardado.getFecha() + ".")
-                    .leida(false)
-                    .build());
+                        .perfil(artista)
+                        .eventoId(guardado.getId())
+                        .mensaje("Has sido invitado al evento '" + guardado.getNombre() + "' el día " + guardado.getFecha() + ".")
+                        .leida(false)
+                        .build());
             }
         }
 
@@ -117,14 +119,14 @@ public class EventoServiceImpl implements EventoService {
     public EventoEdicionResponseDTO editarEvento(Long id, EventoEditarRequestDTO req, String username) {
         if (req.agregarArtistaIds() != null && req.agregarArtistaIds().isEmpty() && !req.tieneCambios()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                "Debes seleccionar una agrupación artística para enviar la invitación");
+                    "Debes seleccionar una agrupación artística para enviar la invitación");
         }
         if (!req.tieneCambios()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No se enviaron cambios");
         }
 
         Evento evento = eventoRepository.findById(id)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "El evento no existe"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "El evento no existe"));
 
         if (!evento.getOrganizador().getUsername().equals(username)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No tienes permiso para editar este evento");
@@ -151,17 +153,17 @@ public class EventoServiceImpl implements EventoService {
         }
 
         boolean intentaEditarCriticos = (req.fecha() != null && !req.fecha().equals(evento.getFecha()))
-            || (req.hora() != null && !req.hora().equals(evento.getHora()))
-            || (req.localidadId() != null && !req.localidadId().equals(evento.getLocalidad().getId()))
-            || (req.direccion() != null && !Objects.equals(req.direccion(), evento.getDireccion()))
-            || (req.agregarArtistaIds() != null && !req.agregarArtistaIds().isEmpty())
-            || (req.quitarArtistaIds() != null && !req.quitarArtistaIds().isEmpty());
+                || (req.hora() != null && !req.hora().equals(evento.getHora()))
+                || (req.localidadId() != null && !req.localidadId().equals(evento.getLocalidad().getId()))
+                || (req.direccion() != null && !Objects.equals(req.direccion(), evento.getDireccion()))
+                || (req.agregarArtistaIds() != null && !req.agregarArtistaIds().isEmpty())
+                || (req.quitarArtistaIds() != null && !req.quitarArtistaIds().isEmpty());
 
         if (intentaEditarCriticos && fueraDeMargenCriticos) {
             throw new EventoConflictException(
-                "EVENTO_CRITICOS_BLOQUEADOS",
-                "La fecha, hora, lugar y artistas solo se pueden modificar hasta 3 días antes del evento",
-                editableCriticosHasta
+                    "EVENTO_CRITICOS_BLOQUEADOS",
+                    "La fecha, hora, lugar y artistas solo se pueden modificar hasta 3 días antes del evento",
+                    editableCriticosHasta
             );
         }
 
@@ -175,7 +177,7 @@ public class EventoServiceImpl implements EventoService {
         }
         if (req.localidadId() != null && !req.localidadId().equals(evento.getLocalidad().getId())) {
             Localidad nuevaLoc = localidadRepository.findById(req.localidadId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "La localidad no existe"));
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "La localidad no existe"));
             camposModificados.add("LOCALIDAD");
             evento.setLocalidad(nuevaLoc);
         }
@@ -187,7 +189,7 @@ public class EventoServiceImpl implements EventoService {
         if (req.quitarArtistaIds() != null) {
             for (Long aId : req.quitarArtistaIds()) {
                 GrupoEvento ge = grupoEventoRepository.findByEvento_IdAndArtista_Id(evento.getId(), aId)
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "El artista no pertenece al evento"));
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "El artista no pertenece al evento"));
 
                 if (ge.getEstadoInvitacion() == EstadoInvitacion.ACEPTADA) {
                     throw new EventoConflictException("ARTISTA_CONFIRMADO_NO_QUITABLE", "No se puede quitar a un artista que ya confirmó su participación");
@@ -230,6 +232,7 @@ public class EventoServiceImpl implements EventoService {
 
                 notificacionRepository.save(Notificacion.builder()
                         .perfil(artista)
+                        .eventoId(evento.getId())
                         .mensaje("Has sido invitado al evento '" + evento.getNombre() + "'.")
                         .build());
             }
@@ -241,20 +244,19 @@ public class EventoServiceImpl implements EventoService {
 
         Evento guardado = eventoRepository.save(evento);
 
-
         int destinatarios = 0;
         boolean notifEnviada = false;
         if (!camposModificados.isEmpty()) {
             List<GrupoEvento> activos = guardado.getGrupos().stream()
-                .filter(g -> g.getEstadoInvitacion() != EstadoInvitacion.RECHAZADA)
-                .toList();
+                    .filter(g -> g.getEstadoInvitacion() != EstadoInvitacion.RECHAZADA)
+                    .toList();
 
             for (GrupoEvento g : activos) {
                 notificacionRepository.save(Notificacion.builder()
-                    .perfil(g.getArtista())
-                    .eventoId(guardado.getId())
-                    .mensaje("Se modificaron datos del evento '" + guardado.getNombre() + "': " + String.join(", ", camposModificados))
-                    .build());
+                        .perfil(g.getArtista())
+                        .eventoId(guardado.getId())
+                        .mensaje("Se modificaron datos del evento '" + guardado.getNombre() + "': " + String.join(", ", camposModificados))
+                        .build());
             }
             destinatarios = activos.size();
             notifEnviada = destinatarios > 0;
@@ -263,13 +265,14 @@ public class EventoServiceImpl implements EventoService {
         EventoDetalleResponseDTO detalleResponse = mapearADetalleResponse(guardado, username);
 
         EventoEdicionResponseDTO.NotificacionEdicionResumen resumen =
-            new EventoEdicionResponseDTO.NotificacionEdicionResumen(notifEnviada, destinatarios, camposModificados);
+                new EventoEdicionResponseDTO.NotificacionEdicionResumen(notifEnviada, destinatarios, camposModificados);
 
         return new EventoEdicionResponseDTO(detalleResponse, resumen);
     }
+
     @Override
     @Transactional(readOnly = true)
-    public List<EventoCalendarioDTO> listarEventosCalendario(int anio, int mes, String usernameActual) {
+    public List<EventoCalendarioDTO> listarEventosCalendario(int anio, int mes, Long usuarioId, boolean soloSeguidos, String usernameActual) {
         if (mes < 1 || mes > 12) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mes inválido");
         }
@@ -278,18 +281,54 @@ public class EventoServiceImpl implements EventoService {
         LocalDate inicio = ym.atDay(1);
         LocalDate fin = ym.atEndOfMonth();
 
-        return eventoRepository.findEventosMesParaUsuario(inicio, fin, EstadoEvento.PUBLICADO, usernameActual).stream()
-                .map(e -> new EventoCalendarioDTO(
-                        e.getId(),
-                        e.getNombre(),
-                        e.getFecha(),
-                        e.getHora(),
-                        e.getLocalidad().getLocalidad(),
-                        e.getEstado(),
-                        e.getOrganizador().getId(),
-                        e.getOrganizador().getNombre()
-                ))
+        return eventoRepository.findEventosMesParaUsuario(
+                        inicio,
+                        fin,
+                        EstadoEvento.PUBLICADO,
+                        usernameActual,
+                        usuarioId,
+                        resolverSeguidorId(soloSeguidos, usernameActual)
+                ).stream()
+                .map(this::mapearACalendario)
                 .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<EventoCalendarioDTO> listarProximos(Long usuarioId, boolean soloSeguidos, String usernameActual, Pageable pageable) {
+        LocalDateTime ahora = LocalDateTime.now(ZONA_ARG);
+
+        return eventoRepository.findProximosParaUsuario(
+                ahora.toLocalDate(),
+                ahora.toLocalTime(),
+                EstadoEvento.PUBLICADO,
+                usernameActual,
+                usuarioId,
+                resolverSeguidorId(soloSeguidos, usernameActual),
+                pageable
+        ).map(this::mapearACalendario);
+    }
+
+    private Long resolverSeguidorId(boolean soloSeguidos, String usernameActual) {
+        if (!soloSeguidos || usernameActual == null) {
+            return null;
+        }
+        return usuarioRepository.findByUsername(usernameActual)
+                .map(Usuario::getId)
+                .orElse(null);
+    }
+
+    private EventoCalendarioDTO mapearACalendario(Evento e) {
+        return new EventoCalendarioDTO(
+                e.getId(),
+                e.getNombre(),
+                e.getFecha(),
+                e.getHora(),
+                e.getLocalidad().getLocalidad(),
+                e.getEstado(),
+                e.getOrganizador().getId(),
+                e.getOrganizador().getNombre()
+        );
     }
 
     @Override
@@ -351,10 +390,10 @@ public class EventoServiceImpl implements EventoService {
             }
 
             notificacionRepository.save(Notificacion.builder()
-                .perfil(organizador)
-                .eventoId(evento.getId())
-                .mensaje("El grupo '" + artista.getNombre() + "' confirmó su asistencia al evento '" + evento.getNombre() + "'.")
-                .build());
+                    .perfil(organizador)
+                    .eventoId(evento.getId())
+                    .mensaje("El grupo '" + artista.getNombre() + "' confirmó su asistencia al evento '" + evento.getNombre() + "'.")
+                    .build());
 
             return "Participación confirmada exitosamente";
         } else {
@@ -363,10 +402,10 @@ public class EventoServiceImpl implements EventoService {
             grupoEventoRepository.save(invitacion);
 
             notificacionRepository.save(Notificacion.builder()
-                .perfil(organizador)
-                .eventoId(evento.getId())
-                .mensaje("El grupo '" + artista.getNombre() + "' rechazó la invitación al evento '" + evento.getNombre() + "'.")
-                .build());
+                    .perfil(organizador)
+                    .eventoId(evento.getId())
+                    .mensaje("El grupo '" + artista.getNombre() + "' rechazó la invitación al evento '" + evento.getNombre() + "'.")
+                    .build());
 
             return "Invitación al evento rechazada";
         }
@@ -390,8 +429,8 @@ public class EventoServiceImpl implements EventoService {
         );
 
         List<ArtistaDetalleDTO> artistas = e.getGrupos().stream()
-            .filter(g -> esOrg || g.getEstadoInvitacion() == EstadoInvitacion.ACEPTADA)
-            .map(g -> new ArtistaDetalleDTO(
+                .filter(g -> esOrg || g.getEstadoInvitacion() == EstadoInvitacion.ACEPTADA)
+                .map(g -> new ArtistaDetalleDTO(
                         g.getId(),
                         g.getArtista().getId(),
                         g.getArtista().getNombre(),

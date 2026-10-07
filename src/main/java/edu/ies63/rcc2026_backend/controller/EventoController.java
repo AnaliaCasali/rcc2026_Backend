@@ -5,6 +5,9 @@ import edu.ies63.rcc2026_backend.service.EventoService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -39,12 +42,28 @@ public class EventoController {
     }
 
     @GetMapping
-    @Operation(summary = "Listar eventos por mes para el calendario")
+    @Operation(summary = "Listar eventos por mes para el calendario.")
     public ResponseEntity<List<EventoCalendarioDTO>> listarEventosMes(
             @RequestParam int anio,
             @RequestParam int mes,
+            @RequestParam(required = false) Long usuarioId,
+            @RequestParam(defaultValue = "false") boolean seguidos,
             Principal principal) {
-        return ResponseEntity.ok(eventoService.listarEventosCalendario(anio, mes, principal != null ? principal.getName() : null));
+        return ResponseEntity.ok(eventoService.listarEventosCalendario(
+                anio, mes, usuarioId, seguidos, principal != null ? principal.getName() : null
+        ));
+    }
+
+    @GetMapping("/proximos")
+    @Operation(summary = "Próximos eventos.")
+    public ResponseEntity<Page<EventoCalendarioDTO>> listarProximos(
+            @RequestParam(required = false) Long usuarioId,
+            @RequestParam(defaultValue = "false") boolean seguidos,
+            @PageableDefault(size = 10) Pageable pageable,
+            Principal principal) {
+        return ResponseEntity.ok(eventoService.listarProximos(
+                usuarioId, seguidos, principal != null ? principal.getName() : null, pageable
+        ));
     }
 
     @GetMapping("/{id}")

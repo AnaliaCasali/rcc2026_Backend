@@ -69,6 +69,7 @@ public class SecurityConfig {
 
                 .requestMatchers(HttpMethod.GET, "/api/v1/posts/premios").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/eventos").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/eventos/proximos").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/eventos/{id:[0-9]+}").permitAll()
 
                 .requestMatchers("/api/v1/auth/usuarios/cambiar-password").authenticated()
