@@ -288,22 +288,22 @@ public class UsuarioServiceImpl implements UsuarioService, UserDetailsService {
     Usuario usuario = usuarioRepository.findByUsername(username)
             .orElseThrow(() -> new UsuarioNoEncontradoException("No se encontró el usuario: " + username));
 
-    // 1. Verificar si la contraseña actual ingresada coincide con la de la base de datos
-    if (!passwordEncoder.matches(request.currentPassword(), usuario.getPassword())) { // O getPasswordActual() según tu DTO
+    if (request.newPassword() == null || request.newPassword().length() < 8) {
+      throw new PasswordInvalidaException("La nueva contraseña debe tener al menos 8 caracteres");
+    }
+
+    if (!passwordEncoder.matches(request.currentPassword(), usuario.getPassword())) {
       throw new PasswordInvalidaException("La contraseña actual es incorrecta");
     }
 
-    // 2. Verificar que la nueva contraseña y su confirmación coincidan
     if (!request.newPassword().equals(request.confirmationPassword())) {
       throw new PasswordInvalidaException("Las nuevas contraseñas no coinciden");
     }
 
-    // 3. (Opcional) Verificar que la nueva no sea idéntica a la anterior
     if (passwordEncoder.matches(request.newPassword(), usuario.getPassword())) {
       throw new PasswordInvalidaException("La nueva contraseña no puede ser igual a la anterior");
     }
 
-    // 4. Encriptar y persistir la nueva contraseña
     usuario.setPassword(passwordEncoder.encode(request.newPassword()));
     usuarioRepository.save(usuario);
   }
