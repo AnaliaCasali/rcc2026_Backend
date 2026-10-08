@@ -19,11 +19,18 @@ public class EmailServiceImpl implements EmailService {
     @Value("${spring.mail.username}")
     private String fromEmail;
 
+    @Value("${app.frontend-url}")
+    private String frontendUrl;
+
     @Async
     @Override
     public void sendPasswordResetEmail(String toEmail, String resetToken) {
         try {
-            String resetUrl = "http://localhost:4200/reset-password?token=" + resetToken;
+            String baseUrl = frontendUrl.endsWith("/")
+                    ? frontendUrl.substring(0, frontendUrl.length() - 1)
+                    : frontendUrl;
+
+            String resetUrl = baseUrl + "/reset-password?token=" + resetToken;
 
             SimpleMailMessage message = new SimpleMailMessage();
             message.setFrom(fromEmail);

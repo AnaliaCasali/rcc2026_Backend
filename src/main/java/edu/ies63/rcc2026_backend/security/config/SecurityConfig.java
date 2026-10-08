@@ -2,6 +2,7 @@ package edu.ies63.rcc2026_backend.security.config;
 
 import edu.ies63.rcc2026_backend.security.jwt.JwtAuthFilter;
 import edu.ies63.rcc2026_backend.service.impl.UsuarioServiceImpl;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -31,6 +32,9 @@ public class SecurityConfig {
   // para usar seguridad de JWT inyecto service.
   private final JwtAuthFilter jwtAuthFilter;
   private final UsuarioServiceImpl usuarioServiceImpl;
+
+  @Value("${app.cors.allowed-origins}")
+  private List<String> allowedOrigins;
 
   //constructor
   SecurityConfig(JwtAuthFilter jwtAuthFilter, UsuarioServiceImpl usuarioServiceImpl){
@@ -119,9 +123,7 @@ public class SecurityConfig {
     CorsConfiguration configuration = new CorsConfiguration();
 
     // Orígenes permitidos (URLs donde corre el frontend)
-    configuration.setAllowedOrigins(List.of(
-            "http://localhost:4200"   // Angular
-    ));
+    configuration.setAllowedOrigins(allowedOrigins);
 
     configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
 

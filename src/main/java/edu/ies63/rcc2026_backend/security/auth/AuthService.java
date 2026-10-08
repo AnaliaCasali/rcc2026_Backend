@@ -180,6 +180,10 @@ public class AuthService {
 
   @Transactional
   public void resetPassword(ResetPasswordRequest request) {
+    if (request.newPassword() == null || request.newPassword().length() < 8) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La nueva contraseña debe tener al menos 8 caracteres");
+    }
+
     if (!request.newPassword().equals(request.confirmationPassword())) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Las contraseñas no coinciden");
     }
