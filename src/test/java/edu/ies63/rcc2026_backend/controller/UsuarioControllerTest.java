@@ -2,11 +2,15 @@ package edu.ies63.rcc2026_backend.controller;
 
 import edu.ies63.rcc2026_backend.dto.PerfilResponseDTO;
 import edu.ies63.rcc2026_backend.dto.PerfilUpdateDTO;
+import edu.ies63.rcc2026_backend.dto.PostResponseDTO;
 import edu.ies63.rcc2026_backend.dto.UsuarioResponseDTO;
 import edu.ies63.rcc2026_backend.enums.Role;
+import edu.ies63.rcc2026_backend.enums.TipoPost;
 import edu.ies63.rcc2026_backend.security.dto.CambiarPasswordRequest;
+import edu.ies63.rcc2026_backend.service.PostService;
 import edu.ies63.rcc2026_backend.service.UsuarioService;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -32,6 +36,9 @@ class UsuarioControllerTest {
 
   @Mock
   private UsuarioService usuarioService;
+
+  @Mock
+  private PostService postService;
 
   @Mock
   private Principal principal;
@@ -133,5 +140,47 @@ class UsuarioControllerTest {
     // Assert
     assertEquals(HttpStatus.NO_CONTENT, response.getStatusCode());
     verify(usuarioService, times(1)).cambiarPassword(request, principal);
+  }
+
+  @Test
+  @DisplayName("listarPostsPorUsuario: Debe retornar la página de posts del usuario")
+  void listarPostsPorUsuario_DebeRetornarPaginaDePosts() {
+    // Arrange
+    Pageable pageable = PageRequest.of(0, 10);
+    Page<PostResponseDTO> paginaMock = new PageImpl<>(List.of(
+        new PostResponseDTO(1L, "Título", "Desc", TipoPost.POST, null, List.of(), null, 1L, "User", null, Role.USUARIO, 0, false)
+    ));
+    when(principal.getName()).thenReturn("usuarioTest");
+    // Asumiendo que inyectaste postService en UsuarioController para manejar esto
+    when(postService.listarPorUsuario(eq(1L), eq(pageable), eq("usuarioTest"))).thenReturn(paginaMock);
+
+    // Act
+    ResponseEntity<Page<PostResponseDTO>> response = usuarioController.postsDeUsuario(1L, pageable, principal);
+
+    // Assert
+    assertEquals(HttpStatus.OK, response.getStatusCode());
+    assertEquals(1, response.getBody().getTotalElements());
+    verify(postService, times(1)).listarPorUsuario(1L, pageable, "usuarioTest");
+  }
+
+  @Test
+  @DisplayName("listarPremiosPorUsuario: Debe retornar la página de premios del usuario")
+  void listarPremiosPorUsuario_DebeRetornarPaginaDePremios() {
+    // Arrange
+    Pageable pageable = PageRequest.of(0, 10);
+    Page<PostResponseDTO> paginaMock = new PageImpl<>(List.of(
+        new PostResponseDTO(2L, "Premio", "Desc", TipoPost.PREMIO, null, List.of(), null, 1L, "User", null, Role.USUARIO, 0, false)
+    ));
+    when(principal.getName()).thenReturn("usuarioTest");
+    // Asumiendo que inyectaste postService en UsuarioController para manejar esto
+    when(postService.listarPremiosPorUsuario(eq(1L), eq(pageable), eq("usuarioTest"))).thenReturn(paginaMock);
+
+    // Act
+    ResponseEntity<Page<PostResponseDTO>> response = usuarioController.premiosDeUsuario(1L, pageable, principal);
+
+    // Assert
+    assertEquals(HttpStatus.OK, response.getStatusCode());
+    assertEquals(1, response.getBody().getTotalElements());
+    verify(postService, times(1)).listarPremiosPorUsuario(1L, pageable, "usuarioTest");
   }
 }

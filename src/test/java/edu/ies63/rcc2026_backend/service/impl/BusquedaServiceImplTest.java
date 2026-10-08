@@ -141,4 +141,20 @@ class BusquedaServiceImplTest {
 
         assertThat(resultado).isEmpty();
     }
+
+    @Test
+    @DisplayName("Filtro por ubicación: Ignora usuarios que no tienen localidad asignada")
+    void buscar_PorUbicacion_IgnoraUsuariosSinLocalidad() {
+        Usuario usuarioSinLocalidad = Usuario.builder()
+            .id(30L).nombre("Grupo Sin Loc").role(Role.GRUPO).debaja(false).localidad(null).build();
+
+        when(usuarioRepository.findByDebajaFalseAndRoleIn(anySet()))
+            .thenReturn(List.of(usuarioSinLocalidad, festivalLasToscas));
+
+        List<PerfilBusquedaDTO> resultado = busquedaService.buscar(null, "toscas", null, null, null, null);
+
+        // Debe ignorar al que tiene localidad null y devolver solo el que coincide
+        assertThat(resultado).hasSize(1);
+        assertThat(resultado.get(0).id()).isEqualTo(20L); // festivalLasToscas
+    }
 }
