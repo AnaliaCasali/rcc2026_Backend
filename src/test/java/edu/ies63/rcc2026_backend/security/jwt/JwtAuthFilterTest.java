@@ -16,12 +16,14 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpHeaders;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
@@ -142,4 +144,50 @@ class JwtAuthFilterTest {
         assertThat(response.getContentAsString()).contains("Token inválido");
     }
 
+    @Test
+    @DisplayName("Debe responder 401 Unauthorized si ocurre una excepción inesperada")
+    void doFilterInternal_ExcepcionInesperada() throws ServletException, IOException {
+        String token = "token.valido";
+        request.addHeader(HttpHeaders.AUTHORIZATION, "Bearer " + token);
+
+        // Forzamos un RuntimeException al extraer el username
+        when(jwtService.extractUsername(token)).thenThrow(new RuntimeException("Fallo interno crítico"));
+
+        jwtAuthFilter.doFilterInternal(request, response, filterChain);
+
+        verify(filterChain, never()).doFilter(request, response);
+        assertThat(response.getStatus()).isEqualTo(401);
+        assertThat(response.getContentAsString()).contains("Error de autenticación");
+    }
+
+    @Test
+    @DisplayName("Debe continuar la cadena y no autenticar si ya existe una autenticación en el contexto")
+    void doFilterInternal_YaAutenticado_NoHaceNada() throws ServletException, IOException {
+        String token = "token.jwt.valido";
+        request.addHeader(HttpHeaders.AUTHORIZATION, "Bearer " + token);
+
+        // Simulamos que el usuario YA está logueado en el hilo actual
+        SecurityContextHolder.getContext().setAuthentication(
+            new UsernamePasswordAuthenticationToken("usuario@ejemplo.com", null, List.of())
+        );
+
+        when(jwtService.extractUsername(token)).thenReturn("usuario@ejemplo.com");
+
+        jwtAuthFilter.doFilterInternal(request, response, filterChain);
+
+        // Verifica que no se llamó a loadUserByUsername porque la rama se saltó
+        verify(userDetailsService, never()).loadUserByUsername(anyString());
+        verify(filterChain).doFilter(request, response);
+    }
+
+    @Test
+    @DisplayName("extractToken: retorna null si el header no empieza con Bearer exacto")
+    void doFilterInternal_HeaderMalFormado() throws ServletException, IOException {
+        request.addHeader(HttpHeaders.AUTHORIZATION, "bearer-minuscula-mal-formado-token");
+
+        jwtAuthFilter.doFilterInternal(request, response, filterChain);
+
+        verify(jwtService, never()).extractUsername(anyString());
+        verify(filterChain).doFilter(request, response);
+    }
 }

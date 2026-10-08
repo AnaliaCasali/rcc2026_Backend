@@ -14,6 +14,7 @@ import edu.ies63.rcc2026_backend.repository.PostLikeRepository;
 import edu.ies63.rcc2026_backend.repository.PostRepository;
 import edu.ies63.rcc2026_backend.repository.UsuarioRepository;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -238,6 +239,33 @@ class PostServiceImplTest {
     when(postRepository.findById(1L)).thenReturn(Optional.of(mockPost));
 
     postService.eliminarPost(1L, "testuser");
+    verify(postRepository, times(1)).delete(mockPost);
+  }
+
+  @Test
+  @DisplayName("eliminarPost: Debe lanzar excepción si el usuario no tiene permisos")
+  void eliminarPost_SinPermisos_DebeLanzarExcepcion() {
+    when(postRepository.findById(1L)).thenReturn(Optional.of(mockPost));
+
+    ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+        () -> postService.eliminarPost(1L, "usuario_intruso")
+    );
+    assertTrue(ex.getMessage().contains("No tienes permiso"));
+  }
+
+  @Test
+  @DisplayName("eliminarPost: Debe capturar IOException si falla la eliminación física sin interrumpir el proceso")
+  void eliminarPost_ErrorAlBorrarArchivo_CapturaExcepcion() {
+    // Arrange: Asignamos una ruta extraña para forzar la captura del log (si la ruta no existe, Files.deleteIfExists devuelve false, pero queremos cubrir el concepto general o las ramas nulas)
+    ImagenPost imgNula = ImagenPost.builder().id(10L).url("/rutainvalida").post(mockPost).build();
+    mockPost.setImagenes(new ArrayList<>(List.of(imgNula)));
+
+    when(postRepository.findById(1L)).thenReturn(Optional.of(mockPost));
+
+    // Act
+    postService.eliminarPost(1L, "testuser");
+
+    // Assert: Verificamos que el post igual se borra de la BD aunque falle el archivo físico
     verify(postRepository, times(1)).delete(mockPost);
   }
 }

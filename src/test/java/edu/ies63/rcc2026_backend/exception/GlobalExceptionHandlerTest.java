@@ -202,4 +202,45 @@ class GlobalExceptionHandlerTest {
         assertThat(response.getBody().get("status")).isEqualTo(404);
         assertThat(response.getBody().get("message")).isEqualTo("Post 123 no existe");
     }
+
+    @Test
+    @DisplayName("handleBadCredentials: retorna 401 Unauthorized")
+    void handleBadCredentials_Retorna401() {
+        org.springframework.security.authentication.BadCredentialsException ex =
+            new org.springframework.security.authentication.BadCredentialsException("Credenciales inválidas");
+
+        ResponseEntity<Map<String, Object>> response = exceptionHandler.handleBadCredentials(ex);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().get("status")).isEqualTo(401);
+        assertThat(response.getBody().get("message")).isEqualTo("Credenciales incorrectas");
+    }
+
+    @Test
+    @DisplayName("handleEventoConflict: retorna 409 Conflict")
+    void handleEventoConflict_Retorna409() {
+        EventoConflictException ex = new EventoConflictException("CODIGO_TEST", "Mensaje de conflicto");
+
+        ResponseEntity<Map<String, Object>> response = exceptionHandler.handleEventoConflict(ex);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().get("status")).isEqualTo(409);
+        assertThat(response.getBody().get("message")).isEqualTo("Mensaje de conflicto");
+        assertThat(response.getBody().get("details")).isNotNull();
+    }
+
+    @Test
+    @DisplayName("handleEventoNoPermitido: retorna 403 Forbidden")
+    void handleEventoNoPermitido_Retorna403() {
+        EventoNoPermitidoException ex = new EventoNoPermitidoException("Acción no permitida");
+
+        ResponseEntity<Map<String, Object>> response = exceptionHandler.handleEventoNoPermitido(ex);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().get("status")).isEqualTo(403);
+        assertThat(response.getBody().get("message")).isEqualTo("Acción no permitida");
+    }
 }

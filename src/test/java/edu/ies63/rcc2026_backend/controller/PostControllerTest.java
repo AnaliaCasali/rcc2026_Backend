@@ -7,6 +7,7 @@ import edu.ies63.rcc2026_backend.enums.Role;
 import edu.ies63.rcc2026_backend.enums.TipoPost;
 import edu.ies63.rcc2026_backend.service.PostService;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -166,5 +167,21 @@ class PostControllerTest {
     // Assert
     assertEquals(HttpStatus.NO_CONTENT, response.getStatusCode());
     verify(postService, times(1)).eliminarPost(idPost, "usuarioTest");
+  }
+
+  @Test
+  @DisplayName("listarPremios: Con Principal nulo debe pasar null al servicio")
+  void listarPremios_SinUsuarioAutenticado_DebeRetornarPagina() {
+    Pageable pageable = PageRequest.of(0, 10);
+    Page<PostResponseDTO> paginaMock = new PageImpl<>(List.of());
+
+    when(postService.listarPremios(pageable, null)).thenReturn(paginaMock);
+
+    // Act: Pasamos null como Principal
+    ResponseEntity<Page<PostResponseDTO>> response = postController.listarPremios(pageable, null);
+
+    // Assert
+    assertEquals(HttpStatus.OK, response.getStatusCode());
+    verify(postService, times(1)).listarPremios(pageable, null);
   }
 }

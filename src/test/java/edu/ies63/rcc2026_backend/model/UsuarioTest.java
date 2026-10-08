@@ -49,16 +49,20 @@ class UsuarioTest {
 
   @Test
   void testUserDetailsImplementacion() {
-    Usuario usuario = new Usuario();
+    // Asignamos un rol para evitar el NullPointerException al evaluar getAuthorities()
+    Usuario usuario = Usuario.builder()
+        .role(Role.USUARIO) // Cualquier valor asignado será evaluado
+        .build();
 
-    // La implementación provista en tu código devuelve true por defecto
+    // Validaciones por defecto de UserDetails
     assertTrue(usuario.isAccountNonExpired());
     assertTrue(usuario.isAccountNonLocked());
     assertTrue(usuario.isCredentialsNonExpired());
     assertTrue(usuario.isEnabled());
 
-    // La implementación actual de getAuthorities() devuelve una lista vacía
-    assertTrue(usuario.getAuthorities().isEmpty());
+    // Validamos que getAuthorities() devuelva las autoridades correspondientes al rol
+    assertFalse(usuario.getAuthorities().isEmpty());
+    assertEquals(2, usuario.getAuthorities().size());
   }
 
   @Test
