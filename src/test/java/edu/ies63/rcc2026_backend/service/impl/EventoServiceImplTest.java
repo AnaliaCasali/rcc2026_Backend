@@ -215,6 +215,47 @@ class EventoServiceImplTest {
           .isInstanceOf(ResponseStatusException.class)
           .hasMessageContaining("El evento no existe");
     }
+    // NUEVO: evento desactivado (toggle-activo)
+    @Test
+    @DisplayName("obtenerDetalleEvento: Lanza 404 a visitante si el evento está desactivado")
+    void obtenerDetalleEvento_eventoDesactivadoYVisitante_lanzaNotFound() {
+      Evento eventoDesactivado = Evento.builder()
+          .id(71L)
+          .estado(EstadoEvento.PUBLICADO)
+          .activo(false)
+          .organizador(organizador)
+          .grupos(new ArrayList<>())
+          .build();
+
+      when(eventoRepository.findById(71L)).thenReturn(Optional.of(eventoDesactivado));
+
+      assertThatThrownBy(() -> eventoService.obtenerDetalleEvento(71L, null))
+          .isInstanceOf(ResponseStatusException.class)
+          .hasMessageContaining("El evento no existe");
+    }
+
+    @Test
+    @DisplayName("obtenerDetalleEvento: El organizador ve su evento desactivado con activo = false")
+    void obtenerDetalleEvento_eventoDesactivadoYOrganizador_retornaActivoFalse() {
+      Evento eventoDesactivado = Evento.builder()
+          .id(72L)
+          .nombre("Peña pausada")
+          .estado(EstadoEvento.PUBLICADO)
+          .activo(false)
+          .organizador(organizador)
+          .localidad(localidad)
+          .fecha(LocalDate.now().plusDays(10))
+          .hora(LocalTime.of(21, 0))
+          .grupos(new ArrayList<>())
+          .build();
+
+      when(eventoRepository.findById(72L)).thenReturn(Optional.of(eventoDesactivado));
+
+      EventoDetalleResponseDTO detalle = eventoService.obtenerDetalleEvento(72L, organizador.getUsername());
+
+      assertThat(detalle.activo()).isFalse();
+    }
+
 
     @Test
     @DisplayName("listarProximos: Resuelve seguidor y mapea correctamente a DTO paginado")
