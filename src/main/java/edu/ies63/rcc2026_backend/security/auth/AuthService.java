@@ -154,17 +154,26 @@ public class AuthService {
   @Transactional
   public void requestPasswordReset(ForgotPasswordRequest request) {
     Usuario user = userRepository.findByUsername(request.email())
-            .or(() -> userRepository.findByUsername(request.email()))
             .orElse(null);
 
     if (user == null) {
       return;
     }
 
-    // 1. Limpiar tokens anteriores asignados a este usuario
-    resetTokenRepository.deleteByUsuario(user);
+    Optional<PasswordResetToken> tokenPrevio = resetTokenRepository.findByUsuario(user);
+    if (tokenPrevio.isPresent()) {
+      LocalDateTime fechaCreacionEstimada = tokenPrevio.get().getExpiryDate().minusMinutes(15);
+      if (fechaCreacionEstimada.plusMinutes(2).isAfter(LocalDateTime.now())) {
+        throw new ResponseStatusException(
+                HttpStatus.TOO_MANY_REQUESTS,
+                "Ya enviamos un enlace a tu correo. Por favor, esperá al menos 2 minutos antes de solicitar otro."
+        );
+      }
+    }
 
-    // 2. Generar token único con expiración de 15 minutos
+    resetTokenRepository.deleteByUsuario(user);
+    resetTokenRepository.flush();
+
     String token = UUID.randomUUID().toString();
     PasswordResetToken resetToken = PasswordResetToken.builder()
             .token(token)
@@ -174,8 +183,14 @@ public class AuthService {
 
     resetTokenRepository.save(resetToken);
 
-    // 3. Enviar correo electrónico
-    emailService.sendPasswordResetEmail(user.getUsername(), token);
+    try {
+      emailService.sendPasswordResetEmail(user.getUsername(), token);
+    } catch (Exception e) {
+      throw new ResponseStatusException(
+              HttpStatus.TOO_MANY_REQUESTS,
+              "Ya enviamos un correo recientemente. Por favor, revisá tu casilla o aguardá unos minutos antes de solicitar otro enlace."
+      );
+    }
   }
 
   @Transactional

@@ -11,5 +11,5 @@ import java.util.List;
 @Repository
 public interface LocalidadRepository extends JpaRepository<Localidad, Long> {
 
-    List<LocalidadResponseDTO> findByLocalidadContainingIgnoreCase(String localidad);
+    List<Localidad> findAllByOrderByLocalidadAsc();
 }
