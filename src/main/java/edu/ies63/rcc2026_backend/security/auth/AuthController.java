@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -76,5 +77,12 @@ public class AuthController {
   public ResponseEntity<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
     authService.resetPassword(request);
     return ResponseEntity.ok().build();
+  }
+
+  @GetMapping("/verify-account")
+  @Operation(summary = "Verificar registro de cuenta mediante token enviado al correo")
+  public ResponseEntity<Map<String, String>> verifyAccount(@RequestParam String token) {
+    authService.verifyAccount(token);
+    return ResponseEntity.ok(Map.of("message", "Cuenta verificada con éxito. Ya puedes iniciar sesión."));
   }
 }

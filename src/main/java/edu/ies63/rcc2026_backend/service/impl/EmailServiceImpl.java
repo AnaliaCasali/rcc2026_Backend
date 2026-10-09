@@ -49,4 +49,29 @@ public class EmailServiceImpl implements EmailService {
             log.error("Error al enviar correo a {}: {}", toEmail, e.getMessage());
         }
     }
+
+    @Async
+    @Override
+    public void sendVerificationEmail(String toEmail, String token) {
+        try {
+            String baseUrl = frontendUrl.endsWith("/")
+                ? frontendUrl.substring(0, frontendUrl.length() - 1)
+                : frontendUrl;
+            String verifyUrl = baseUrl + "/verify-account?token=" + token;
+
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(fromEmail);
+            message.setTo(toEmail);
+            message.setSubject("Verifica tu cuenta - RCC 2026");
+            message.setText("Bienvenido,\n\n"
+                + "Gracias por registrarte. Para activar tu cuenta, haz clic en el siguiente enlace:\n\n"
+                + verifyUrl + "\n\n"
+                + "Este enlace expirará en 24 horas.\n");
+
+            mailSender.send(message);
+            log.info("Correo de verificación enviado a: {}", toEmail);
+        } catch (Exception e) {
+            log.error("Error al enviar correo de verificación a {}: {}", toEmail, e.getMessage());
+        }
+    }
 }

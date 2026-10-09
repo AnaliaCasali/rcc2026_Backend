@@ -9,9 +9,11 @@ import edu.ies63.rcc2026_backend.exception.PasswordInvalidaException;
 import edu.ies63.rcc2026_backend.model.Localidad;
 import edu.ies63.rcc2026_backend.model.PasswordResetToken;
 import edu.ies63.rcc2026_backend.model.Usuario;
+import edu.ies63.rcc2026_backend.model.VerificationToken;
 import edu.ies63.rcc2026_backend.repository.LocalidadRepository;
 import edu.ies63.rcc2026_backend.repository.PasswordResetTokenRepository;
 import edu.ies63.rcc2026_backend.repository.UsuarioRepository;
+import edu.ies63.rcc2026_backend.repository.VerificationTokenRepository;
 import edu.ies63.rcc2026_backend.security.dto.*;
 import edu.ies63.rcc2026_backend.security.jwt.JwtService;
 import edu.ies63.rcc2026_backend.service.EmailService;
@@ -42,27 +44,27 @@ public class AuthService {
   private final AuthenticationManager authenticationManager;
   private final PasswordResetTokenRepository resetTokenRepository;
   private final EmailService emailService;
+  private final VerificationTokenRepository verificationTokenRepository;
 
 
   public AuthResponse authenticate(AuthRequest request) {
+    // 1. Buscamos el usuario en la base de datos
+    Usuario user = userRepository.findByUsername(request.username())
+        .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuario no encontrado"));
+
+    // 2. Como ya tenemos al usuario, nos fijamos si validó su correo
+    if (user.getVerificado() != null && !user.getVerificado()) {
+      throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Por favor, verifica tu cuenta en el correo electrónico antes de iniciar sesión.");
+    }
+
+    // 3. Si el usuario existe y está verificado, validamos los datos
     authenticationManager.authenticate(
-        new UsernamePasswordAuthenticationToken(
-            request.username(),
-            request.password()
-        )
+        new UsernamePasswordAuthenticationToken(request.username(), request.password())
     );
 
-    Usuario user = userRepository.findByUsername(request.username())
-        .orElseThrow(() -> new ResponseStatusException(
-            HttpStatus.UNAUTHORIZED,
-            "Usuario no encontrado: " + request.username()));
 
-/*        Map<String, Object> claims = new HashMap<>();
-        claims.put("rol", user.getRole().name());
 
-        return new AuthResponse(jwtService.generateToken(claims, user));*/
     return guardarYGenerarToken(user);
-
   }
 
   @Transactional
@@ -78,7 +80,14 @@ public class AuthService {
         .localidad(localidad)
         .role(Role.USUARIO)          // ← rol FIJO, no viene del cliente
         .debaja(false)
+        .verificado(false)
         .build();
+
+    // 1. Guardar el usuario primero para que obtenga su ID en la BD
+    userRepository.save(user);
+
+    // 2. Generar el token y enviar el correo usando tu método auxiliar
+    generarYEnviarTokenVerificacion(user);
 
     return guardarYGenerarToken(user);
   }
@@ -98,7 +107,14 @@ public class AuthService {
         .localidad(localidad)
         .role(Role.ORGANIZADOR)      // ← rol FIJO
         .debaja(false)
+        .verificado(false)
         .build();
+
+    // 1. Guardar el usuario primero para que obtenga su ID en la BD
+    userRepository.save(user);
+
+    // 2. Generar el token y enviar el correo usando tu método auxiliar
+    generarYEnviarTokenVerificacion(user);
 
     return guardarYGenerarToken(user);
   }
@@ -118,7 +134,14 @@ public class AuthService {
         .localidad(localidad)
         .role(Role.GRUPO)            // ← rol FIJO
         .debaja(false)
+        .verificado(false)
         .build();
+
+    // 1. Guardar el usuario primero para que obtenga su ID en la BD
+    userRepository.save(user);
+
+    // 2. Generar el token y enviar el correo usando tu método auxiliar
+    generarYEnviarTokenVerificacion(user);
 
     return guardarYGenerarToken(user);
   }
@@ -218,5 +241,35 @@ public class AuthService {
 
     // Eliminar token para que no pueda reutilizarse
     resetTokenRepository.delete(resetToken);
+  }
+
+  // Verificacion de email para registro
+  @Transactional
+  public void verifyAccount(String token) {
+    VerificationToken verificationToken = verificationTokenRepository.findByToken(token)
+        .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Token inválido o no existe"));
+
+    if (verificationToken.isExpired()) {
+      verificationTokenRepository.delete(verificationToken);
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El token de verificación ha expirado");
+    }
+
+    Usuario user = verificationToken.getUsuario();
+    user.setVerificado(true);
+    userRepository.save(user);
+
+    // Se elimina el token una vez utilizado con éxito
+    verificationTokenRepository.delete(verificationToken);
+  }
+
+  private void generarYEnviarTokenVerificacion(Usuario user) {
+    String token = UUID.randomUUID().toString();
+    VerificationToken verificationToken = VerificationToken.builder()
+        .token(token)
+        .usuario(user)
+        .expiryDate(LocalDateTime.now().plusHours(24))
+        .build();
+    verificationTokenRepository.save(verificationToken);
+    emailService.sendVerificationEmail(user.getUsername(), token);
   }
 }
