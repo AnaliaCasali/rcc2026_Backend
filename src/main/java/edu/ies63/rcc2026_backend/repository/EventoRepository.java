@@ -18,7 +18,8 @@ public interface EventoRepository extends JpaRepository<Evento, Long> {
     String ACEPTADA = "edu.ies63.rcc2026_backend.enums.EstadoInvitacion.ACEPTADA";
 
     String FILTROS =
-            "(e.estado = :estadoPublicado OR e.organizador.username = :username) " +
+            "(e.activo = true OR e.organizador.username = :username) " +
+                    "AND (e.estado = :estadoPublicado OR e.organizador.username = :username) " +
                     "AND (:usuarioId IS NULL OR e.organizador.id = :usuarioId " +
                     "     OR EXISTS (SELECT g FROM GrupoEvento g WHERE g.evento = e AND g.artista.id = :usuarioId AND g.estadoInvitacion = " + ACEPTADA + ")) " +
                     "AND (:seguidorId IS NULL OR e.organizador.id = :seguidorId " +

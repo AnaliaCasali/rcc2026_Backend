@@ -89,4 +89,11 @@ public class EventoController {
         String mensaje = eventoService.responderInvitacion(id, respuesta.aceptar(), principal.getName());
         return ResponseEntity.ok(Map.of("message", mensaje));
     }
+
+    @PatchMapping("/{id}/toggle-activo")
+    @Operation(summary = "Habilitar/Desactivar Evento")
+    public ResponseEntity<Void> alternarActivo(@PathVariable Long id, Principal principal) {
+        eventoService.alternarActivo(id, principal.getName());
+        return ResponseEntity.noContent().build();
+    }
 }

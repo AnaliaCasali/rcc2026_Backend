@@ -18,7 +18,7 @@ public class LocalidadServiceImpl implements LocalidadService {
   @Override
   public List<LocalidadResponseDTO> listarLocalidades() {
 
-    return localidadRepository.findAll()
+    return localidadRepository.findAllByOrderByLocalidadAsc()
         .stream()
         .map(l -> new LocalidadResponseDTO(
             l.getId(),

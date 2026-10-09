@@ -21,4 +21,6 @@ public interface EventoService {
     List<InvitacionDetalleDTO> listarMisInvitaciones(String usernameArtista);
 
     String responderInvitacion(Long invitacionId, boolean aceptar, String usernameArtista);
+
+    void alternarActivo(Long id, String username);
 }

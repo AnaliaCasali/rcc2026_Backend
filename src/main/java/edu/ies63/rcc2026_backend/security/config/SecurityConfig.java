@@ -80,14 +80,15 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/auth/usuarios/cambiar-password").authenticated()
                 .requestMatchers("/api/v1/auth/usuarios/perfil/mi-perfil").authenticated()
 
-                .requestMatchers(HttpMethod.POST, "/api/v1/posts/crear").authenticated()
+                .requestMatchers(HttpMethod.POST, "/api/v1/posts/crear").hasAnyRole("ORGANIZADOR", "GRUPO")
                 .requestMatchers(HttpMethod.PATCH, "/api/v1/posts/editar/**").authenticated()
                 .requestMatchers(HttpMethod.DELETE, "/api/v1/posts/eliminar/**").authenticated()
 
                 .requestMatchers("/api/v1/eventos/mis-invitaciones").authenticated()
                 .requestMatchers("/api/v1/eventos/invitaciones/**").authenticated()
-                .requestMatchers("/api/v1/eventos/crear").authenticated()
-                .requestMatchers("/api/v1/eventos/editar/**").authenticated()
+                .requestMatchers(HttpMethod.POST, "/api/v1/eventos/crear").hasAnyRole("ORGANIZADOR", "GRUPO")
+                .requestMatchers(HttpMethod.PATCH, "/api/v1/eventos/editar/**").hasAnyRole("ORGANIZADOR", "GRUPO")
+                    .requestMatchers(HttpMethod.PATCH, "/api/v1/eventos/*/toggle-activo").hasAnyRole("ORGANIZADOR", "GRUPO")
 
                 .requestMatchers("/api/**").authenticated()
                 .anyRequest().authenticated()

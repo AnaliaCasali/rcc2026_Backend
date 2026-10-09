@@ -3,6 +3,7 @@ package edu.ies63.rcc2026_backend.exception;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mail.MailException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -140,5 +141,14 @@ public class GlobalExceptionHandler {
   @ExceptionHandler(EventoNoPermitidoException.class)
   public ResponseEntity<Map<String, Object>> handleEventoNoPermitido(EventoNoPermitidoException ex) {
     return buildResponse(HttpStatus.FORBIDDEN, ex.getMessage(), null);
+  }
+
+  @ExceptionHandler(MailException.class)
+  public ResponseEntity<Map<String, Object>> handleMailException(MailException ex) {
+    return buildResponse(
+            HttpStatus.TOO_MANY_REQUESTS,
+            "No se pudo enviar el correo en este momento. Por favor, aguarde unos minutos antes de reintentar.",
+            ex.getMessage()
+    );
   }
 }

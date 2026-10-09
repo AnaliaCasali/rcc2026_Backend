@@ -143,14 +143,8 @@ public class EventoServiceImpl implements EventoService {
         LocalDate editableCriticosHasta = evento.getFecha().minusDays(3);
         boolean fueraDeMargenCriticos = hoy.isAfter(editableCriticosHasta);
 
-        List<String> camposModificados = new ArrayList<>();
-
-        if (req.nombre() != null && !req.nombre().isBlank() && !req.nombre().equals(evento.getNombre())) {
-            evento.setNombre(req.nombre());
-        }
-        if (req.detalle() != null && !req.detalle().isBlank() && !req.detalle().equals(evento.getDetalle())) {
-            evento.setDetalle(req.detalle());
-        }
+        boolean intentaEditarTexto = (req.nombre() != null && !req.nombre().isBlank() && !req.nombre().equals(evento.getNombre()))
+                || (req.detalle() != null && !req.detalle().isBlank() && !req.detalle().equals(evento.getDetalle()));
 
         boolean intentaEditarCriticos = (req.fecha() != null && !req.fecha().equals(evento.getFecha()))
                 || (req.hora() != null && !req.hora().equals(evento.getHora()))
@@ -159,12 +153,23 @@ public class EventoServiceImpl implements EventoService {
                 || (req.agregarArtistaIds() != null && !req.agregarArtistaIds().isEmpty())
                 || (req.quitarArtistaIds() != null && !req.quitarArtistaIds().isEmpty());
 
-        if (intentaEditarCriticos && fueraDeMargenCriticos) {
+        if ((intentaEditarTexto || intentaEditarCriticos) && fueraDeMargenCriticos) {
             throw new EventoConflictException(
-                    "EVENTO_CRITICOS_BLOQUEADOS",
-                    "La fecha, hora, lugar y artistas solo se pueden modificar hasta 3 días antes del evento",
+                    "EVENTO_BLOQUEADO",
+                    "El evento no puede modificarse faltando 3 días o menos para su realización",
                     editableCriticosHasta
             );
+        }
+
+        List<String> camposModificados = new ArrayList<>();
+
+        if (req.nombre() != null && !req.nombre().isBlank() && !req.nombre().equals(evento.getNombre())) {
+            camposModificados.add("NOMBRE");
+            evento.setNombre(req.nombre());
+        }
+        if (req.detalle() != null && !req.detalle().isBlank() && !req.detalle().equals(evento.getDetalle())) {
+            camposModificados.add("DETALLE");
+            evento.setDetalle(req.detalle());
         }
 
         if (req.fecha() != null && !req.fecha().equals(evento.getFecha())) {
@@ -419,12 +424,19 @@ public class EventoServiceImpl implements EventoService {
 
         boolean noHaFinalizado = fechaHora.isAfter(ahora);
         LocalDate editableHasta = e.getFecha().minusDays(3);
-        boolean puedeCriticos = esOrg && noHaFinalizado && !hoy.isAfter(editableHasta);
+        boolean dentroDelPlazo = !hoy.isAfter(editableHasta);
+
+        boolean puedeEditar = esOrg && noHaFinalizado && dentroDelPlazo;
+
+        EstadoEvento estadoCalculado = e.getEstado();
+        if (!noHaFinalizado && e.getEstado() != EstadoEvento.CANCELADO) {
+            estadoCalculado = EstadoEvento.FINALIZADO;
+        }
 
         PermisosEventoDTO permisos = new PermisosEventoDTO(
                 esOrg,
-                esOrg && noHaFinalizado,
-                puedeCriticos,
+                puedeEditar,
+                puedeEditar,
                 editableHasta
         );
 
@@ -447,7 +459,7 @@ public class EventoServiceImpl implements EventoService {
                 e.getHora(),
                 new LocalidadSimpleDTO(e.getLocalidad().getId(), e.getLocalidad().getLocalidad()),
                 e.getDireccion(),
-                e.getEstado(),
+                estadoCalculado,
                 new OrganizadorSimpleDTO(e.getOrganizador().getId(), e.getOrganizador().getNombre(), obtenerFotoPerfilUrl(e.getOrganizador())),
                 artistas,
                 permisos
@@ -464,5 +476,21 @@ public class EventoServiceImpl implements EventoService {
                 .map(ImagenPerfil::getUrl)
                 .findFirst()
                 .orElse(null);
+    }
+
+    @Override
+    @Transactional
+    public void alternarActivo(Long id, String username) {
+        Evento evento = eventoRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "El evento no existe"));
+
+        if (!evento.getOrganizador().getUsername().equals(username)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No tienes permiso para modificar este evento");
+        }
+
+        boolean nuevoEstado = evento.getActivo() == null || !evento.getActivo();
+        evento.setActivo(nuevoEstado);
+
+        eventoRepository.save(evento);
     }
 }
