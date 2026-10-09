@@ -284,4 +284,39 @@ class EventoIntegrationTest {
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isForbidden());
     }
+
+    @Test
+    @DisplayName("PATCH toggle-activo cambia el estado del evento")
+    void debeAlternarActivoEvento() throws Exception {
+        Evento evento = Evento.builder()
+            .nombre("Show")
+            .detalle("Detalle del show") // <-- Requerido por la BD
+            .fecha(LocalDate.now().plusDays(10)) // <-- Requerido
+            .hora(LocalTime.of(20, 0)) // <-- Requerido
+            .localidad(localidadTest) // <-- Requerido
+            .estado(EstadoEvento.PUBLICADO)
+            .organizador(organizador)
+            .activo(true)
+            .build();
+        evento = eventoRepository.save(evento);
+
+        String tokenOrg = jwtService.generateToken(Map.of("rol", "ORGANIZADOR"), organizador);
+
+        mockMvc.perform(patch("/api/v1/eventos/" + evento.getId() + "/toggle-activo")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenOrg))
+            .andExpect(status().isNoContent());
+
+        Evento actualizado = eventoRepository.findById(evento.getId()).orElseThrow();
+        assertThat(actualizado.getActivo()).isFalse();
+    }
+
+    @Test
+    @DisplayName("GET mis-invitaciones retorna invitaciones para un grupo")
+    void debeListarMisInvitaciones() throws Exception {
+        String tokenGrupo = jwtService.generateToken(Map.of("rol", "GRUPO"), grupoArtista);
+        mockMvc.perform(get("/api/v1/eventos/mis-invitaciones")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenGrupo))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$").isArray());
+    }
 }

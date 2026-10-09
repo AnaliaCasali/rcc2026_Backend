@@ -21,6 +21,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Transactional;
 import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -35,6 +36,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @Testcontainers
+@Transactional
 class AuthIntegrationTest {
 
     @Container
@@ -70,8 +72,8 @@ class AuthIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        resetTokenRepository.deleteAll();
-        usuarioRepository.deleteAll();
+        // resetTokenRepository.deleteAll();
+        // usuarioRepository.deleteAll();
     }
 
     @Test
@@ -83,6 +85,7 @@ class AuthIntegrationTest {
                 .nombre("Usuario Login")
                 .role(Role.USUARIO)
                 .debaja(false)
+                .verificado(true)
                 .build();
         usuarioRepository.save(usuario);
 
@@ -106,4 +109,29 @@ class AuthIntegrationTest {
                 .andExpect(status().isOk());
     }
 
+    @Autowired
+    private edu.ies63.rcc2026_backend.repository.VerificationTokenRepository verificationTokenRepository;
+
+    @Test
+    @DisplayName("POST /api/v1/auth/reset-password responde bad request si token es inválido")
+    void resetPassword_TokenInvalido() throws Exception {
+        edu.ies63.rcc2026_backend.security.dto.ResetPasswordRequest request =
+            new edu.ies63.rcc2026_backend.security.dto.ResetPasswordRequest("token-falso", "ClaveValida123!", "ClaveValida123!");
+
+        mockMvc.perform(post("/api/v1/auth/reset-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message", org.hamcrest.Matchers.containsString("inválido o inexistente")));
+    }
+
+    @Test
+    @DisplayName("GET /api/v1/auth/verify-account valida el token")
+    void verifyAccount_ValidaToken() throws Exception {
+        // En una integración real se espera 400 si pasamos un token inventado sin crearlo antes en BD
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v1/auth/verify-account")
+                .param("token", "token-inventado"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message", org.hamcrest.Matchers.containsString("inválido o no existe")));
+    }
 }

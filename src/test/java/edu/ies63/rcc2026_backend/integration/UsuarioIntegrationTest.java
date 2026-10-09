@@ -22,6 +22,7 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Transactional;
 import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -38,6 +39,7 @@ import static org.hamcrest.Matchers.is;
 @SpringBootTest
 @AutoConfigureMockMvc
 @Testcontainers
+@Transactional
 class UsuarioIntegrationTest {
 
   @Container
@@ -76,9 +78,6 @@ class UsuarioIntegrationTest {
 
   @BeforeEach
   void setUp() {
-    usuarioRepository.deleteAll();
-    localidadRepository.deleteAll();
-
     localidadTest = new Localidad();
     localidadTest.setLocalidad("Resistencia");
     localidadTest.setProvincia(Provincia.CHACO);
@@ -220,5 +219,38 @@ class UsuarioIntegrationTest {
                     .content(objectMapper.writeValueAsString(request)))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.details", is("La contraseña actual es incorrecta")));
+  }
+
+  @Test
+  void debeDevolverListaDeUsuariosPaginada() throws Exception {
+    mockMvc.perform(get("/api/v1/auth/usuarios/lista-usuarios")
+            .param("page", "0")
+            .param("size", "10"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content").exists());
+  }
+
+  @Test
+  void debeDevolverPerfilPublicoPorId() throws Exception {
+    Usuario user = Usuario.builder().username("public@test.com").password("hash").nombre("Público").role(Role.USUARIO).build();
+    user = usuarioRepository.save(user);
+
+    mockMvc.perform(get("/api/v1/auth/usuarios/" + user.getId() + "/perfil"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.nombre", is("Público")));
+  }
+
+  @Test
+  void debeListarPostsYPremiosDeUnUsuario() throws Exception {
+    Usuario user = Usuario.builder().username("content@test.com").password("hash").nombre("Content").role(Role.USUARIO).build();
+    user = usuarioRepository.save(user);
+
+    mockMvc.perform(get("/api/v1/auth/usuarios/" + user.getId() + "/posts"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content").exists());
+
+    mockMvc.perform(get("/api/v1/auth/usuarios/" + user.getId() + "/premios"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content").exists());
   }
 }

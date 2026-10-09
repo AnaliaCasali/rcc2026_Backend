@@ -86,7 +86,7 @@ public class PostIntegrationTest {
         .username("test@correo.com")
         .password(passwordEncoder.encode("password123"))
         .nombre("Usuario de Prueba")
-        .role(Role.USUARIO)
+        .role(Role.GRUPO)
         .debaja(false)
         .build();
     usuarioActual = usuarioRepository.save(usuarioTest);
@@ -182,5 +182,21 @@ public class PostIntegrationTest {
         .andExpect(status().isNoContent());
 
     Assertions.assertTrue(postRepository.findById(postGuardado.getId()).isEmpty());
+  }
+
+  @Test
+  public void listarPremios_DeberiaRetornarStatus200() throws Exception {
+    mockMvc.perform(get("/api/v1/posts/premios")
+            .header(HttpHeaders.AUTHORIZATION, "Bearer " + jwtTokenValid))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content").exists());
+  }
+
+  @Test
+  public void listarFeed_DeberiaRetornarStatus200() throws Exception {
+    mockMvc.perform(get("/api/v1/posts/feed")
+            .header(HttpHeaders.AUTHORIZATION, "Bearer " + jwtTokenValid))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content").exists());
   }
 }
