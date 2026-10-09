@@ -154,4 +154,17 @@ class AuthControllerTest {
                 .andExpect(status().isOk());
     }
 
+    @Test
+    @DisplayName("GET /api/v1/auth/verify-account responde 200 OK")
+    void verifyAccount_Exito() throws Exception {
+        String token = "token-uuid-1234";
+        doNothing().when(authService).verifyAccount(token);
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v1/auth/verify-account")
+                .param("token", token)
+                .contentType(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.message").value("Cuenta verificada con éxito. Ya puedes iniciar sesión."));
+    }
+
 }

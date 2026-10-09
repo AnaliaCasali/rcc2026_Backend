@@ -56,18 +56,15 @@ class ResetPasswordRequestTest {
     }
 
     @Test
-    @DisplayName("Debe fallar si la nueva contraseña tiene menos de 6 caracteres")
+    @DisplayName("Debe fallar si la nueva contraseña tiene menos de 8 caracteres")
     void validacion_PasswordCorta() {
         ResetPasswordRequest dto = new ResetPasswordRequest(
-                "token-uuid-1234",
-                "123",
-                "123"
+            "token-uuid-1234",
+            "123",
+            "123"
         );
-
         Set<ConstraintViolation<ResetPasswordRequest>> violations = validator.validate(dto);
-
         assertThat(violations).hasSize(1);
-        assertThat(violations.iterator().next().getMessage()).contains("al menos 6 caracteres");
+        assertThat(violations.iterator().next().getMessage()).contains("al menos 8 caracteres");
     }
-
 }

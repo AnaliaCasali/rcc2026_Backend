@@ -12,6 +12,7 @@ import edu.ies63.rcc2026_backend.model.Usuario;
 import edu.ies63.rcc2026_backend.repository.LocalidadRepository;
 import edu.ies63.rcc2026_backend.repository.PasswordResetTokenRepository;
 import edu.ies63.rcc2026_backend.repository.UsuarioRepository;
+import edu.ies63.rcc2026_backend.repository.VerificationTokenRepository;
 import edu.ies63.rcc2026_backend.security.dto.*;
 import edu.ies63.rcc2026_backend.security.jwt.JwtService;
 import edu.ies63.rcc2026_backend.service.EmailService;
@@ -61,6 +62,9 @@ class AuthServiceTest {
     private PasswordResetTokenRepository resetTokenRepository;
 
     @Mock
+    private VerificationTokenRepository verificationTokenRepository;
+
+    @Mock
     private EmailService emailService;
 
     @Mock
@@ -81,6 +85,7 @@ class AuthServiceTest {
                 .password("hashActual123")
                 .role(Role.USUARIO)
                 .debaja(false)
+                .verificado(true)
                 .build();
 
         mockLocalidad = mock(Localidad.class);
@@ -141,7 +146,8 @@ class AuthServiceTest {
             AuthResponse response = authService.registerUsuario(request);
 
             assertThat(response.token()).isEqualTo("token-jwt");
-            verify(userRepository).save(any(Usuario.class));
+            // Se verifica que se llame 2 veces: al crear para tener ID, y al final del flujo
+            verify(userRepository, times(2)).save(any(Usuario.class));
         }
 
         @Test
@@ -163,7 +169,8 @@ class AuthServiceTest {
             AuthResponse response = authService.registerOrganizador(request);
 
             assertThat(response.token()).isEqualTo("token-jwt");
-            verify(userRepository).save(any(Usuario.class));
+            // Se verifica que se llame 2 veces
+            verify(userRepository, times(2)).save(any(Usuario.class));
         }
 
         @Test
@@ -185,7 +192,8 @@ class AuthServiceTest {
             AuthResponse response = authService.registerGrupo(request);
 
             assertThat(response.token()).isEqualTo("token-jwt");
-            verify(userRepository).save(any(Usuario.class));
+            // Se verifica que se llame 2 veces
+            verify(userRepository, times(2)).save(any(Usuario.class));
         }
 
         @Test
@@ -325,6 +333,61 @@ class AuthServiceTest {
                     .hasMessageContaining("El token de recuperación ha expirado");
 
             verify(resetTokenRepository).delete(expiredToken);
+            verify(userRepository, never()).save(any());
+        }
+    }
+
+    @Nested
+    @DisplayName("Pruebas de verifyAccount")
+    class VerifyAccountTests {
+
+        @Test
+        @DisplayName("Debe verificar cuenta correctamente y eliminar token")
+        void verifyAccount_Exito() {
+            String token = "token-valido";
+            edu.ies63.rcc2026_backend.model.VerificationToken verificationToken = edu.ies63.rcc2026_backend.model.VerificationToken.builder()
+                .token(token)
+                .usuario(mockUser)
+                .expiryDate(LocalDateTime.now().plusHours(24))
+                .build();
+
+            when(verificationTokenRepository.findByToken(token)).thenReturn(Optional.of(verificationToken));
+
+            authService.verifyAccount(token);
+
+            assertThat(mockUser.getVerificado()).isTrue();
+            verify(userRepository).save(mockUser);
+            verify(verificationTokenRepository).delete(verificationToken);
+        }
+
+        @Test
+        @DisplayName("Debe lanzar ResponseStatusException si el token es inválido")
+        void verifyAccount_TokenInvalido() {
+            String token = "token-invalido";
+            when(verificationTokenRepository.findByToken(token)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> authService.verifyAccount(token))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("Token inválido o no existe");
+        }
+
+        @Test
+        @DisplayName("Debe lanzar ResponseStatusException si el token ha expirado")
+        void verifyAccount_TokenExpirado() {
+            String token = "token-expirado";
+            edu.ies63.rcc2026_backend.model.VerificationToken verificationToken = edu.ies63.rcc2026_backend.model.VerificationToken.builder()
+                .token(token)
+                .usuario(mockUser)
+                .expiryDate(LocalDateTime.now().minusHours(1))
+                .build();
+
+            when(verificationTokenRepository.findByToken(token)).thenReturn(Optional.of(verificationToken));
+
+            assertThatThrownBy(() -> authService.verifyAccount(token))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("El token de verificación ha expirado");
+
+            verify(verificationTokenRepository).delete(verificationToken);
             verify(userRepository, never()).save(any());
         }
     }

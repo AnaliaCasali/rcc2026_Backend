@@ -53,18 +53,16 @@ class CambiarPasswordRequestTest {
     }
 
     @Test
-    @DisplayName("Debe fallar si la nueva contraseña tiene menos de 6 caracteres")
+    @DisplayName("Debe fallar si la nueva contraseña tiene menos de 8 caracteres")
     void validacion_PasswordCorta() {
         CambiarPasswordRequest dto = new CambiarPasswordRequest(
-                "PasswordVieja123",
-                "12345",
-                "12345"
+            "PasswordVieja123",
+            "12345",
+            "12345"
         );
-
         Set<ConstraintViolation<CambiarPasswordRequest>> violations = validator.validate(dto);
-
         assertThat(violations).hasSize(1);
-        assertThat(violations.iterator().next().getMessage()).contains("al menos 6 caracteres");
+        assertThat(violations.iterator().next().getMessage()).contains("al menos 8 caracteres");
     }
 
 }
