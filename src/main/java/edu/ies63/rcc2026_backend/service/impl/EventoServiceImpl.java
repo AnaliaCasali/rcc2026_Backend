@@ -332,7 +332,8 @@ public class EventoServiceImpl implements EventoService {
                 e.getLocalidad().getLocalidad(),
                 e.getEstado(),
                 e.getOrganizador().getId(),
-                e.getOrganizador().getNombre()
+                e.getOrganizador().getNombre(),
+        !Boolean.FALSE.equals(e.getActivo())
         );
     }
 
@@ -349,8 +350,12 @@ public class EventoServiceImpl implements EventoService {
         if (e.getEstado() == EstadoEvento.PENDIENTE && !esOrg && !esInvitado) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "El evento no existe");
         }
-
+        if (Boolean.FALSE.equals(e.getActivo()) && !esOrg && !esInvitado) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "El evento no existe");
+        }
         return mapearADetalleResponse(e, usernameActual);
+
+
     }
 
     @Override
@@ -462,7 +467,8 @@ public class EventoServiceImpl implements EventoService {
                 estadoCalculado,
                 new OrganizadorSimpleDTO(e.getOrganizador().getId(), e.getOrganizador().getNombre(), obtenerFotoPerfilUrl(e.getOrganizador())),
                 artistas,
-                permisos
+                permisos,
+            !Boolean.FALSE.equals(e.getActivo())
         );
     }
 
