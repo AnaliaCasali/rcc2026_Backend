@@ -232,7 +232,7 @@ public class UsuarioServiceImpl implements UsuarioService, UserDetailsService {
   public PerfilResponseDTO mapearAPerfilResponseDTO(Usuario u) {
     Long localidadId = u.getLocalidad() != null ? u.getLocalidad().getId() : null;
     String localidadStr = u.getLocalidad() != null
-        ? u.getLocalidad().getLocalidad() + ", " + u.getLocalidad().getProvincia()
+        ? u.getLocalidad().getLocalidad() + ", " + formatearProvincia(u.getLocalidad().getProvincia().name())
         : "";
 
     List<ImagenPerfilResponseDTO> imagenesDto = u.getImagenesPerfil() != null
@@ -306,5 +306,19 @@ public class UsuarioServiceImpl implements UsuarioService, UserDetailsService {
 
     usuario.setPassword(passwordEncoder.encode(request.newPassword()));
     usuarioRepository.save(usuario);
+  }
+
+  private String formatearProvincia(String provinciaEnum) {
+    if (provinciaEnum == null) return "";
+    String[] palabras = provinciaEnum.split("_");
+    StringBuilder formateado = new StringBuilder();
+    for (String palabra : palabras) {
+      if (!palabra.isEmpty()) {
+        formateado.append(palabra.substring(0, 1).toUpperCase())
+            .append(palabra.substring(1).toLowerCase())
+            .append(" ");
+      }
+    }
+    return formateado.toString().trim();
   }
 }
