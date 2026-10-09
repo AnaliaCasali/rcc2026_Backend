@@ -78,7 +78,9 @@ public class Usuario implements UserDetails {
     @OneToMany(mappedBy = "usuario", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<RedSocial> redes;
 
-
+    @Column(name = "verificado", nullable = false)
+    @Builder.Default
+    private Boolean verificado = false;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities()
