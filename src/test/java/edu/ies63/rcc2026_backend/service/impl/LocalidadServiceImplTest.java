@@ -45,17 +45,15 @@ class LocalidadServiceImplTest {
   @Test
   void listarLocalidades_DebeRetornarListaMapeada() {
     // Arrange
-    when(localidadRepository.findAll()).thenReturn(List.of(localidadMock));
-
+    when(localidadRepository.findAllByOrderByLocalidadAsc()).thenReturn(List.of(localidadMock));
     // Act
     List<LocalidadResponseDTO> result = localidadService.listarLocalidades();
-
     // Assert
     assertEquals(1, result.size());
     LocalidadResponseDTO dto = result.get(0);
     assertEquals(1L, dto.id());
     assertEquals("Resistencia", dto.localidad());
-    verify(localidadRepository, times(1)).findAll();
+    verify(localidadRepository, times(1)).findAllByOrderByLocalidadAsc();
   }
 
   @Test
@@ -66,8 +64,7 @@ class LocalidadServiceImplTest {
     otra.setLocalidad("Corrientes");
     otra.setProvincia(Provincia.CORRIENTES);
     otra.setPais(Pais.ARGENTINA);
-
-    when(localidadRepository.findAll()).thenReturn(List.of(localidadMock, otra));
+    when(localidadRepository.findAllByOrderByLocalidadAsc()).thenReturn(List.of(localidadMock, otra));
 
     // Act
     List<LocalidadResponseDTO> result = localidadService.listarLocalidades();
@@ -81,14 +78,12 @@ class LocalidadServiceImplTest {
   @Test
   void listarLocalidades_SinLocalidades_DebeRetornarListaVacia() {
     // Arrange
-    when(localidadRepository.findAll()).thenReturn(List.of());
-
+    when(localidadRepository.findAllByOrderByLocalidadAsc()).thenReturn(List.of());
     // Act
     List<LocalidadResponseDTO> result = localidadService.listarLocalidades();
-
     // Assert
     assertTrue(result.isEmpty());
-    verify(localidadRepository, times(1)).findAll();
+    verify(localidadRepository, times(1)).findAllByOrderByLocalidadAsc();
   }
 
   // ---------- listarLocalidadesMapa ----------

@@ -157,7 +157,7 @@ class EventoServiceImplTest {
       assertThatThrownBy(() -> eventoService.editarEvento(50L, req, organizador.getUsername()))
           .isInstanceOf(EventoConflictException.class)
           // Buscamos substring para evitar errores de encoding con tildes
-          .hasMessageContaining("solo se pueden modificar hasta 3 d");
+          .hasMessageContaining("no puede modificarse faltando 3 d");
     }
 
     @Test
@@ -623,5 +623,42 @@ class EventoServiceImplTest {
         .isInstanceOf(ResponseStatusException.class)
         // CORRECCION 2: Substring sin tilde
         .hasMessageContaining("no encontrada");
+  }
+
+  @Nested
+  @DisplayName("Tests HU-XX: Alternar Estado Activo")
+  class AlternarActivoTests {
+    @Test
+    @DisplayName("alternarActivo: Cambia exitosamente el estado activo del evento")
+    void alternarActivo_exitoso() {
+      Evento evento = Evento.builder().id(10L).organizador(organizador).activo(true).build();
+      when(eventoRepository.findById(10L)).thenReturn(Optional.of(evento));
+
+      eventoService.alternarActivo(10L, organizador.getUsername());
+
+      assertThat(evento.getActivo()).isFalse();
+      verify(eventoRepository, times(1)).save(evento);
+    }
+
+    @Test
+    @DisplayName("alternarActivo: Lanza ResponseStatusException si el evento no existe")
+    void alternarActivo_eventoNoExiste() {
+      when(eventoRepository.findById(10L)).thenReturn(Optional.empty());
+
+      assertThatThrownBy(() -> eventoService.alternarActivo(10L, organizador.getUsername()))
+          .isInstanceOf(ResponseStatusException.class)
+          .hasMessageContaining("El evento no existe");
+    }
+
+    @Test
+    @DisplayName("alternarActivo: Lanza ResponseStatusException si el usuario no es el organizador")
+    void alternarActivo_noEsOrganizador() {
+      Evento evento = Evento.builder().id(10L).organizador(organizador).activo(true).build();
+      when(eventoRepository.findById(10L)).thenReturn(Optional.of(evento));
+
+      assertThatThrownBy(() -> eventoService.alternarActivo(10L, "intruso@mail.com"))
+          .isInstanceOf(ResponseStatusException.class)
+          .hasMessageContaining("No tienes permiso");
+    }
   }
 }

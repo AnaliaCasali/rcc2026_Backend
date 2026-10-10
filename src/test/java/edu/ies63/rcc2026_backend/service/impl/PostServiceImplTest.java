@@ -268,4 +268,16 @@ class PostServiceImplTest {
     // Assert: Verificamos que el post igual se borra de la BD aunque falle el archivo físico
     verify(postRepository, times(1)).delete(mockPost);
   }
+
+  @Test
+  void listarPremiosPorUsuario_DebeRetornarPagina() {
+    when(postRepository.findByUsuarioIdAndTipoPost(eq(1L), eq(TipoPost.PREMIO), any(Pageable.class)))
+        .thenReturn(new PageImpl<>(List.of(mockPost)));
+
+    Page<PostResponseDTO> result = postService.listarPremiosPorUsuario(1L, pageable, "testuser");
+
+    assertEquals(1, result.getTotalElements());
+    verify(postRepository, times(1)).findByUsuarioIdAndTipoPost(eq(1L), eq(TipoPost.PREMIO), any(Pageable.class));
+  }
+
 }

@@ -29,6 +29,7 @@ class EmailServiceImplTest {
     void setUp() {
         // Asignamos el valor al campo privado @Value("${spring.mail.username}")
         ReflectionTestUtils.setField(emailService, "fromEmail", "noreply@rcc2026.edu.ar");
+        ReflectionTestUtils.setField(emailService, "frontendUrl", "http://localhost:4200");
     }
 
     @Test
@@ -65,4 +66,41 @@ class EmailServiceImplTest {
 
         verify(mailSender, times(1)).send(any(SimpleMailMessage.class));
     }
+
+    @Test
+    @DisplayName("Envío exitoso: construye y envía el mensaje de verificación")
+    void sendVerificationEmail_Exitoso() {
+        String destinatario = "usuario@test.com";
+        String token = "abc-123-token";
+        ReflectionTestUtils.setField(emailService, "frontendUrl", "http://localhost:4200");
+
+        emailService.sendVerificationEmail(destinatario, token);
+
+        ArgumentCaptor<SimpleMailMessage> messageCaptor = ArgumentCaptor.forClass(SimpleMailMessage.class);
+        verify(mailSender, times(1)).send(messageCaptor.capture());
+
+        SimpleMailMessage capturedMessage = messageCaptor.getValue();
+        assertThat(capturedMessage.getFrom()).isEqualTo("noreply@rcc2026.edu.ar");
+        assertThat(capturedMessage.getTo()).containsExactly(destinatario);
+        assertThat(capturedMessage.getSubject()).isEqualTo("Verifica tu cuenta - RCC 2026");
+        assertThat(capturedMessage.getText())
+            .contains("http://localhost:4200/verify-account?token=abc-123-token");
+    }
+
+    @Test
+    @DisplayName("Manejo de excepción en sendVerificationEmail: no interrumpe el flujo si falla")
+    void sendVerificationEmail_FallaEnvio_EntraEnCatch() {
+        String destinatario = "usuario@test.com";
+        String token = "abc-123-token";
+        ReflectionTestUtils.setField(emailService, "frontendUrl", "http://localhost:4200");
+
+        doThrow(new MailSendException("Fallo de conexión SMTP"))
+            .when(mailSender).send(any(SimpleMailMessage.class));
+
+        emailService.sendVerificationEmail(destinatario, token);
+
+        verify(mailSender, times(1)).send(any(SimpleMailMessage.class));
+    }
+
+
 }

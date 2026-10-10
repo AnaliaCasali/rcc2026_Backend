@@ -75,6 +75,7 @@ class UsuarioServiceImplTest {
     Localidad localidad = new Localidad();
     localidad.setId(1L);
     localidad.setLocalidad("Resistencia");
+    localidad.setProvincia(Provincia.CHACO);
 
     usuarioMock = Usuario.builder()
         .id(1L)
@@ -555,7 +556,7 @@ class UsuarioServiceImplTest {
 
     // Assert
     assertEquals(5L, response.localidadId());
-    assertEquals("Corrientes, CORRIENTES", response.localidadStr());
+    assertEquals("Corrientes, Corrientes", response.localidadStr());
 
     assertEquals(1, response.imagenesPerfil().size());
     ImagenPerfilResponseDTO imgResp = response.imagenesPerfil().get(0);
