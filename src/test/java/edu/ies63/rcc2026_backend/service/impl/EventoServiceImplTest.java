@@ -4,6 +4,7 @@ import edu.ies63.rcc2026_backend.dto.*;
 import edu.ies63.rcc2026_backend.enums.*;
 import edu.ies63.rcc2026_backend.exception.EventoConflictException;
 import edu.ies63.rcc2026_backend.exception.EventoNoPermitidoException;
+import edu.ies63.rcc2026_backend.exception.UsuarioNoEncontradoException;
 import edu.ies63.rcc2026_backend.model.*;
 import edu.ies63.rcc2026_backend.repository.*;
 import org.junit.jupiter.api.BeforeEach;
@@ -190,6 +191,182 @@ class EventoServiceImplTest {
           // Substring sin tilde en límite
           .hasMessageContaining("mite de 20 agrupaciones/artistas");
     }
+
+    @Test
+    @DisplayName("crearEvento: auto-participación (el creador es grupo y se incluye), evento queda PUBLICADO y no se notifica a sí mismo")
+    void crearEvento_autoParticipa_quedaPublicadoYNoNotificaAlCreador() {
+      Usuario creadorGrupo = Usuario.builder().id(99L).username("creador@mail.com").role(Role.GRUPO).build();
+      when(usuarioRepository.findByUsername(creadorGrupo.getUsername())).thenReturn(Optional.of(creadorGrupo));
+      when(localidadRepository.findById(5L)).thenReturn(Optional.of(localidad));
+      // Simulamos que se seleccionan dos grupos: el propio creador y otro artista
+      when(usuarioRepository.findAllById(anySet())).thenReturn(List.of(creadorGrupo, artistaGrupo));
+      when(eventoRepository.save(any(Evento.class))).thenAnswer(i -> {
+        Evento e = i.getArgument(0);
+        e.setId(100L);
+        return e;
+      });
+
+      EventoCrearRequestDTO req = new EventoCrearRequestDTO(
+          "Festival", "Detalle", LocalDate.now().plusDays(10), LocalTime.of(20, 0),
+          5L, "Calle 1", List.of(99L, 2L)
+      );
+
+      EventoDetalleResponseDTO res = eventoService.crearEvento(req, creadorGrupo.getUsername());
+
+      assertThat(res.estado()).isEqualTo(EstadoEvento.PUBLICADO);
+      // Notificaciones: solo se debe notificar al OTRO artista (id 2), NO al creador
+      verify(notificacionRepository, times(1)).save(any(Notificacion.class));
+    }
+
+    @Test
+    @DisplayName("editarEvento: Edición completa exitosa que envía notificaciones de cambios a los artistas activos")
+    void editarEvento_edicionCompleta_exitoYEnviaNotificaciones() {
+      Evento eventoExistente = Evento.builder()
+          .id(50L).nombre("Viejo").detalle("Viejo").fecha(LocalDate.now().plusDays(10)).hora(LocalTime.of(21,0))
+          .localidad(localidad).direccion("Vieja").organizador(organizador).grupos(new ArrayList<>()).build();
+      GrupoEvento geAceptado = GrupoEvento.builder().artista(artistaGrupo).estadoInvitacion(EstadoInvitacion.ACEPTADA).build();
+      eventoExistente.getGrupos().add(geAceptado);
+
+      when(eventoRepository.findById(50L)).thenReturn(Optional.of(eventoExistente));
+      // when(localidadRepository.findById(5L)).thenReturn(Optional.of(localidad));
+      when(eventoRepository.save(any(Evento.class))).thenReturn(eventoExistente);
+
+      // Editamos todos los campos que se pueden editar
+      EventoEditarRequestDTO req = new EventoEditarRequestDTO(
+          "Nuevo Nombre", "Nuevo Detalle", LocalDate.now().plusDays(15), LocalTime.of(22, 0),
+          5L, "Nueva Dir", null, null
+      );
+
+      EventoEdicionResponseDTO res = eventoService.editarEvento(50L, req, organizador.getUsername());
+
+      assertThat(res.notificacion().enviada()).isTrue();
+      assertThat(res.notificacion().camposModificados()).containsExactlyInAnyOrder(
+          "NOMBRE", "DETALLE", "FECHA", "HORA", "DIRECCION"
+      );
+      assertThat(eventoExistente.getNombre()).isEqualTo("Nuevo Nombre");
+      // Verifica que se haya guardado la notificación para el artista
+      verify(notificacionRepository, times(1)).save(any(Notificacion.class));
+    }
+
+    @Test
+    @DisplayName("editarEvento: Intenta agregar un artista que ya está invitado, lo ignora silenciosamente (continue)")
+    void editarEvento_agregarArtistaYaExistente_loIgnora() {
+      Evento eventoExistente = Evento.builder()
+          .id(50L).nombre("Ev").fecha(LocalDate.now().plusDays(10)).hora(LocalTime.of(21,0))
+          .organizador(organizador).localidad(localidad).grupos(new ArrayList<>()).build();
+      GrupoEvento ge = GrupoEvento.builder().artista(artistaGrupo).build();
+      eventoExistente.getGrupos().add(ge);
+
+      when(eventoRepository.findById(50L)).thenReturn(Optional.of(eventoExistente));
+      // Simulamos que el repositorio dice que ya existe la relación
+      when(grupoEventoRepository.existsByEvento_IdAndArtista_Id(50L, 2L)).thenReturn(true);
+      when(eventoRepository.save(any(Evento.class))).thenReturn(eventoExistente);
+
+      EventoEditarRequestDTO req = new EventoEditarRequestDTO(
+          "Cambio", null, null, null, null, null, List.of(2L), null
+      );
+
+      eventoService.editarEvento(50L, req, organizador.getUsername());
+
+      // Verifica que no se buscó al artista porque el if() hizo 'continue'
+      verify(usuarioRepository, never()).findById(2L);
+      verify(grupoEventoRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("crearEvento: Lanza UsuarioNoEncontradoException si el creador no existe")
+    void crearEvento_usuarioInexistente_lanzaException() {
+      when(usuarioRepository.findByUsername("fantasma@mail.com")).thenReturn(Optional.empty());
+
+      EventoCrearRequestDTO req = new EventoCrearRequestDTO("Nom", "Det", LocalDate.now().plusDays(1), LocalTime.now(), 1L, "Dir", List.of(2L));
+
+      assertThatThrownBy(() -> eventoService.crearEvento(req, "fantasma@mail.com"))
+          .isInstanceOf(UsuarioNoEncontradoException.class);
+    }
+
+    @Test
+    @DisplayName("editarEvento: Lanza BadRequest si la nueva localidad no existe")
+    void editarEvento_localidadInexistente_lanzaBadRequest() {
+      Evento evento = Evento.builder().id(50L).fecha(LocalDate.now().plusDays(10)).hora(LocalTime.now())
+          .organizador(organizador).localidad(localidad).grupos(new ArrayList<>()).build();
+
+      when(eventoRepository.findById(50L)).thenReturn(Optional.of(evento));
+      when(localidadRepository.findById(99L)).thenReturn(Optional.empty());
+
+      EventoEditarRequestDTO req = new EventoEditarRequestDTO(null, null, null, null, 99L, null, null, null);
+
+      assertThatThrownBy(() -> eventoService.editarEvento(50L, req, organizador.getUsername()))
+          .isInstanceOf(ResponseStatusException.class)
+          .hasMessageContaining("La localidad no existe");
+    }
+
+    @Test
+    @DisplayName("editarEvento: Pone direccion en null si se envía un string en blanco")
+    void editarEvento_direccionEnBlanco_seteaNull() {
+      Evento evento = Evento.builder().id(50L).fecha(LocalDate.now().plusDays(10)).hora(LocalTime.now())
+          .direccion("Dir Vieja").organizador(organizador).localidad(localidad).grupos(new ArrayList<>()).build();
+
+      evento.getGrupos().add(GrupoEvento.builder().artista(artistaGrupo).estadoInvitacion(EstadoInvitacion.ACEPTADA).build());
+      when(eventoRepository.findById(50L)).thenReturn(Optional.of(evento));
+      when(eventoRepository.save(any(Evento.class))).thenReturn(evento);
+
+      // Enviamos espacios en blanco en la dirección
+      EventoEditarRequestDTO req = new EventoEditarRequestDTO(null, null, null, null, null, "   ", null, null);
+
+      eventoService.editarEvento(50L, req, organizador.getUsername());
+
+      assertThat(evento.getDireccion()).isNull();
+    }
+
+    @Test
+    @DisplayName("editarEvento: Lanza BadRequest si el artista a agregar no existe")
+    void editarEvento_agregarArtistaInexistente_lanzaBadRequest() {
+      Evento evento = Evento.builder()
+          .id(50L)
+          .fecha(LocalDate.now().plusDays(10))
+          .hora(LocalTime.now())
+          .organizador(organizador)
+          .localidad(localidad)
+          .grupos(new ArrayList<>())
+          .build();
+
+      evento.getGrupos().add(GrupoEvento.builder()
+          .artista(artistaGrupo)
+          .estadoInvitacion(EstadoInvitacion.ACEPTADA)
+          .build());
+
+      when(eventoRepository.findById(50L)).thenReturn(Optional.of(evento));
+      when(grupoEventoRepository.existsByEvento_IdAndArtista_Id(eq(50L), eq(99L))).thenReturn(false);
+      when(usuarioRepository.findById(99L)).thenReturn(Optional.empty());
+
+      EventoEditarRequestDTO req = new EventoEditarRequestDTO(
+          null, null, null, null, null, null, List.of(99L), null
+      );
+
+      assertThatThrownBy(() -> eventoService.editarEvento(50L, req, organizador.getUsername()))
+          .isInstanceOf(ResponseStatusException.class)
+          .hasMessageContaining("Artista no encontrado");
+    }
+
+    @Test
+    @DisplayName("editarEvento: Lanza BadRequest si el artista a agregar no tiene rol GRUPO")
+    void editarEvento_agregarArtistaNoGrupo_lanzaBadRequest() {
+      Evento evento = Evento.builder().id(50L).fecha(LocalDate.now().plusDays(10)).hora(LocalTime.now())
+          .organizador(organizador).localidad(localidad).grupos(new ArrayList<>()).build();
+      Usuario noGrupo = Usuario.builder().id(3L).role(Role.USUARIO).build();
+
+      evento.getGrupos().add(GrupoEvento.builder().artista(artistaGrupo).estadoInvitacion(EstadoInvitacion.ACEPTADA).build());
+
+      when(eventoRepository.findById(50L)).thenReturn(Optional.of(evento));
+      when(grupoEventoRepository.existsByEvento_IdAndArtista_Id(50L, 3L)).thenReturn(false);
+      when(usuarioRepository.findById(3L)).thenReturn(Optional.of(noGrupo));
+
+      EventoEditarRequestDTO req = new EventoEditarRequestDTO(null, null, null, null, null, null, List.of(3L), null);
+
+      assertThatThrownBy(() -> eventoService.editarEvento(50L, req, organizador.getUsername()))
+          .isInstanceOf(ResponseStatusException.class)
+          .hasMessageContaining("Solo se pueden agregar usuarios con rol GRUPO");
+    }
   }
 
   // =========================================================================
@@ -283,6 +460,72 @@ class EventoServiceImplTest {
       assertThat(resultado.getContent().get(0).nombre()).isEqualTo("Show Rock");
       assertThat(resultado.getContent().get(0).organizadorNombre()).isEqualTo("Org Principal");
     }
+
+    @Test
+    @DisplayName("listarEventosCalendario: Retorna lista mapeada exitosamente para un mes válido")
+    void listarEventosCalendario_exitoso() {
+      Evento e = Evento.builder().id(10L).nombre("Ev").fecha(LocalDate.of(2026,10,15)).hora(LocalTime.of(20,0))
+          .localidad(localidad).organizador(organizador).estado(EstadoEvento.PUBLICADO).activo(true).build();
+      when(eventoRepository.findEventosMesParaUsuario(any(), any(), eq(EstadoEvento.PUBLICADO), eq(null), eq(null), eq(null)))
+          .thenReturn(List.of(e));
+
+      List<EventoCalendarioDTO> res = eventoService.listarEventosCalendario(2026, 10, null, false, null);
+
+      assertThat(res).hasSize(1);
+      assertThat(res.get(0).id()).isEqualTo(10L);
+    }
+
+    @Test
+    @DisplayName("listarProximos: Resuelve a visitante anónimo pasando null al repository")
+    void listarProximos_anonimo() {
+      Pageable pageable = PageRequest.of(0, 10);
+      when(eventoRepository.findProximosParaUsuario(any(), any(), eq(EstadoEvento.PUBLICADO), isNull(), isNull(), isNull(), eq(pageable)))
+          .thenReturn(Page.empty());
+
+      Page<EventoCalendarioDTO> resultado = eventoService.listarProximos(null, false, null, pageable);
+
+      assertThat(resultado).isEmpty();
+    }
+
+    @Test
+    @DisplayName("obtenerDetalleEvento: Evento con fecha pasada se mapea dinámicamente a estado FINALIZADO y quita permisos")
+    void obtenerDetalleEvento_finalizado() {
+      Evento e = Evento.builder().id(10L).nombre("Ev").estado(EstadoEvento.PUBLICADO)
+          .fecha(LocalDate.now().minusDays(5)).hora(LocalTime.of(20,0))
+          .localidad(localidad).direccion("Dir").organizador(organizador).grupos(new ArrayList<>()).activo(true).build();
+      when(eventoRepository.findById(10L)).thenReturn(Optional.of(e));
+
+      EventoDetalleResponseDTO res = eventoService.obtenerDetalleEvento(10L, organizador.getUsername());
+
+      // Aunque en BD diga PUBLICADO, el sistema detectó fecha pasada y devuelve FINALIZADO
+      assertThat(res.estado()).isEqualTo(EstadoEvento.FINALIZADO);
+      assertThat(res.permisos().puedeEditarBasicos()).isFalse();
+      assertThat(res.permisos().puedeEditarCriticos()).isFalse();
+    }
+
+    @Test
+    @DisplayName("obtenerDetalleEvento: Visitante normal solo ve artistas con invitación ACEPTADA y soporta fotos nulas")
+    void obtenerDetalleEvento_visitanteSoloVeAceptados() {
+      Evento e = Evento.builder().id(10L).nombre("Ev").estado(EstadoEvento.PUBLICADO)
+          .fecha(LocalDate.now().plusDays(5)).hora(LocalTime.of(20,0))
+          .localidad(localidad).direccion("Dir").organizador(organizador).grupos(new ArrayList<>()).activo(true).build();
+
+      Usuario artistaPendiente = Usuario.builder().id(20L).username("pendiente@mail.com").nombre("Pendiente").build();
+      Usuario artistaAceptado = Usuario.builder().id(30L).username("aceptado@mail.com").nombre("Aceptado").imagenesPerfil(List.of(
+          ImagenPerfil.builder().tipoImagen(TipoImagen.PORTADA).url("ignorame.jpg").build() // Solo portada, forzará null en FotoPerfil
+      )).build();
+
+      e.getGrupos().add(GrupoEvento.builder().artista(artistaPendiente).estadoInvitacion(EstadoInvitacion.PENDIENTE).build());
+      e.getGrupos().add(GrupoEvento.builder().artista(artistaAceptado).estadoInvitacion(EstadoInvitacion.ACEPTADA).build());
+
+      when(eventoRepository.findById(10L)).thenReturn(Optional.of(e));
+
+      EventoDetalleResponseDTO res = eventoService.obtenerDetalleEvento(10L, "visitante@mail.com");
+
+      assertThat(res.artistas()).hasSize(1);
+      assertThat(res.artistas().get(0).nombre()).isEqualTo("Aceptado");
+      assertThat(res.artistas().get(0).fotoPerfil()).isNull();
+    }
   }
 
   // =========================================================================
@@ -352,6 +595,23 @@ class EventoServiceImplTest {
       assertThat(evento.getEstado()).isEqualTo(EstadoEvento.PENDIENTE);
       verify(eventoRepository, never()).save(evento);
       verify(notificacionRepository, times(1)).save(any(Notificacion.class));
+    }
+
+    @Test
+    @DisplayName("listarMisInvitaciones: Mapea correctamente las invitaciones recibidas por un grupo")
+    void listarMisInvitaciones_exitoso() {
+      Evento evento = Evento.builder().id(90L).nombre("Fest").detalle("Detalle fest").fecha(LocalDate.now())
+          .hora(LocalTime.now()).localidad(localidad).direccion("Dir").organizador(organizador).build();
+      GrupoEvento inv = GrupoEvento.builder().id(15L).evento(evento).artista(artistaGrupo).estadoInvitacion(EstadoInvitacion.PENDIENTE).build();
+
+      when(grupoEventoRepository.findByArtista_Username(artistaGrupo.getUsername())).thenReturn(List.of(inv));
+
+      List<InvitacionDetalleDTO> res = eventoService.listarMisInvitaciones(artistaGrupo.getUsername());
+
+      assertThat(res).hasSize(1);
+      assertThat(res.get(0).idInvitacion()).isEqualTo(15L);
+      assertThat(res.get(0).nombreEvento()).isEqualTo("Fest");
+      assertThat(res.get(0).estadoInvitacion()).isEqualTo(EstadoInvitacion.PENDIENTE);
     }
   }
 

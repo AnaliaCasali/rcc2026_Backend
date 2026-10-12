@@ -28,7 +28,6 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.util.Map;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -133,5 +132,26 @@ class AuthIntegrationTest {
                 .param("token", "token-inventado"))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.message", org.hamcrest.Matchers.containsString("inválido o no existe")));
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/auth/resend-verification funciona correctamente")
+    void resendVerification_Funciona() throws Exception {
+        // Creamos un usuario de prueba explícitamente no verificado
+        Usuario usuario = Usuario.builder()
+            .username("noverificado@test.com")
+            .password(passwordEncoder.encode("Password123!"))
+            .nombre("Usuario No Verificado")
+            .role(Role.USUARIO)
+            .debaja(false)
+            .verificado(false) // <- Clave para este test
+            .build();
+        usuarioRepository.save(usuario);
+
+        mockMvc.perform(post("/api/v1/auth/resend-verification")
+                .param("email", "noverificado@test.com")
+                .contentType(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.message").exists());
     }
 }

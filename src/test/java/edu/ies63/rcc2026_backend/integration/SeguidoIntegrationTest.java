@@ -2,8 +2,16 @@ package edu.ies63.rcc2026_backend.integration;
 
 import edu.ies63.rcc2026_backend.enums.Role;
 import edu.ies63.rcc2026_backend.model.Usuario;
+import edu.ies63.rcc2026_backend.repository.EventoRepository;
+import edu.ies63.rcc2026_backend.repository.GrupoEventoRepository;
+import edu.ies63.rcc2026_backend.repository.LocalidadRepository;
+import edu.ies63.rcc2026_backend.repository.NotificacionRepository;
+import edu.ies63.rcc2026_backend.repository.PasswordResetTokenRepository;
+import edu.ies63.rcc2026_backend.repository.PostLikeRepository;
+import edu.ies63.rcc2026_backend.repository.PostRepository;
 import edu.ies63.rcc2026_backend.repository.SeguidoRepository;
 import edu.ies63.rcc2026_backend.repository.UsuarioRepository;
+import edu.ies63.rcc2026_backend.repository.VerificationTokenRepository;
 import edu.ies63.rcc2026_backend.security.jwt.JwtService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -47,8 +55,37 @@ class SeguidoIntegrationTest {
   }
 
   @Autowired private MockMvc mockMvc;
-  @Autowired private UsuarioRepository usuarioRepository;
-  @Autowired private SeguidoRepository seguidoRepository;
+
+  @Autowired
+  private UsuarioRepository usuarioRepository;
+
+  @Autowired
+  private LocalidadRepository localidadRepository;
+
+  @Autowired
+  private NotificacionRepository notificacionRepository;
+
+  @Autowired
+  private GrupoEventoRepository grupoEventoRepository;
+
+  @Autowired
+  private EventoRepository eventoRepository;
+
+  @Autowired
+  private PostLikeRepository postLikeRepository;
+
+  @Autowired
+  private PostRepository postRepository;
+
+  @Autowired
+  private SeguidoRepository seguidoRepository;
+
+  @Autowired
+  private VerificationTokenRepository verificationTokenRepository;
+
+  @Autowired
+  private PasswordResetTokenRepository passwordResetTokenRepository;
+
   @Autowired private JwtService jwtService;
 
   private Usuario seguidor;
@@ -57,11 +94,33 @@ class SeguidoIntegrationTest {
 
   @BeforeEach
   void setUp() {
+    notificacionRepository.deleteAll();
+    grupoEventoRepository.deleteAll();
+    eventoRepository.deleteAll();
+    postLikeRepository.deleteAll();
+    postRepository.deleteAll();
     seguidoRepository.deleteAll();
-    usuarioRepository.deleteAll();
+    verificationTokenRepository.deleteAll();
+    passwordResetTokenRepository.deleteAll();
 
-    seguidor = Usuario.builder().username("fan@test.com").password("hash").nombre("Fanático").role(Role.USUARIO).build();
-    grupo = Usuario.builder().username("banda@test.com").password("hash").nombre("La Banda").role(Role.GRUPO).build();
+    usuarioRepository.deleteAll();
+    localidadRepository.deleteAll();
+
+    seguidor = Usuario.builder()
+        .username("fan@test.com")
+        .password("hash")
+        .nombre("Fanático")
+        .role(Role.USUARIO)
+        .verificado(true)
+        .build();
+
+    grupo = Usuario.builder()
+        .username("banda@test.com")
+        .password("hash")
+        .nombre("La Banda")
+        .role(Role.GRUPO)
+        .verificado(true)
+        .build();
 
     usuarioRepository.save(seguidor);
     usuarioRepository.save(grupo);

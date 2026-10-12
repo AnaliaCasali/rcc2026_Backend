@@ -65,7 +65,14 @@ class LocalidadIntegrationTest {
     loc.setLongitud(-58.98);
     localidadRepository.save(loc);
 
-    Usuario user = Usuario.builder().username("loc@test.com").password("hash").nombre("Loc User").role(Role.USUARIO).debaja(false).verificado(true).build();
+    Usuario user = Usuario.builder()
+        .username("loc@test.com")
+        .password("hash")
+        .nombre("Loc User")
+        .role(Role.USUARIO)
+        .debaja(false)
+        .verificado(true)
+        .build();
     usuarioRepository.save(user);
     token = jwtService.generateToken(Map.of("rol", "USUARIO"), user);
   }
@@ -74,8 +81,8 @@ class LocalidadIntegrationTest {
   void listarLocalidades_Exitoso() throws Exception {
     mockMvc.perform(get("/api/v1/localidades"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$", hasSize(1)))
-        .andExpect(jsonPath("$[0].localidad", is("Resistencia")));
+        .andExpect(jsonPath("$", hasSize(337)))
+        .andExpect(jsonPath("$[0].localidad", is("Aarón Castellanos")));
   }
 
   @Test
@@ -84,7 +91,7 @@ class LocalidadIntegrationTest {
     mockMvc.perform(get("/api/v1/localidades/mapa")
             .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$", hasSize(1)))
-        .andExpect(jsonPath("$[0].latitud", is(-27.45)));
+        .andExpect(jsonPath("$", hasSize(337)))
+        .andExpect(jsonPath("$[0].latitud", is(-27.4514)));
   }
 }

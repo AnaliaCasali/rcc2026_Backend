@@ -88,6 +88,7 @@ public class PostIntegrationTest {
         .nombre("Usuario de Prueba")
         .role(Role.GRUPO)
         .debaja(false)
+        .verificado(true)
         .build();
     usuarioActual = usuarioRepository.save(usuarioTest);
 

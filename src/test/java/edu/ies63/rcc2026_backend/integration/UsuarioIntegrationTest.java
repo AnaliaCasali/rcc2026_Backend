@@ -91,11 +91,13 @@ class UsuarioIntegrationTest {
         "nuevo@test.com", "secreta123", "Usuario Integracion", "Bio Test", localidadTest.getId()
     );
 
+    // Esperamos el código 201 Created y verificamos que traiga message y username (no JWT)
     mockMvc.perform(post("/api/v1/auth/register/usuario")
             .contentType(MediaType.APPLICATION_JSON)
             .content(objectMapper.writeValueAsString(request)))
         .andExpect(status().isCreated())
-        .andExpect(jsonPath("$.token").exists());
+        .andExpect(jsonPath("$.message").exists())
+        .andExpect(jsonPath("$.username", is("nuevo@test.com")));
   }
 
   @Test
@@ -107,6 +109,7 @@ class UsuarioIntegrationTest {
         .nombre("Mi Perfil Integracion")
         .role(Role.USUARIO)
         .localidad(localidadTest)
+        .verificado(true)
         .build();
     usuarioRepository.save(usuario);
 
@@ -129,6 +132,7 @@ class UsuarioIntegrationTest {
         .nombre("Nombre Viejo")
         .role(Role.USUARIO)
         .localidad(localidadTest)
+        .verificado(true)
         .build();
     usuarioRepository.save(usuario);
 
@@ -167,6 +171,7 @@ class UsuarioIntegrationTest {
             .nombre("Usuario Pass")
             .role(Role.USUARIO)
             .localidad(localidadTest)
+            .verificado(true)
             .imagenesPerfil(new java.util.ArrayList<>())
             .redes(new java.util.ArrayList<>())
             .build();
@@ -200,6 +205,7 @@ class UsuarioIntegrationTest {
             .nombre("Usuario Error Pass")
             .role(Role.USUARIO)
             .localidad(localidadTest)
+            .verificado(true)
             .imagenesPerfil(new java.util.ArrayList<>())
             .redes(new java.util.ArrayList<>())
             .build();
@@ -232,7 +238,13 @@ class UsuarioIntegrationTest {
 
   @Test
   void debeDevolverPerfilPublicoPorId() throws Exception {
-    Usuario user = Usuario.builder().username("public@test.com").password("hash").nombre("Público").role(Role.USUARIO).build();
+    Usuario user = Usuario.builder()
+        .username("public@test.com")
+        .password("hash")
+        .nombre("Público")
+        .role(Role.USUARIO)
+        .verificado(true)
+        .build();
     user = usuarioRepository.save(user);
 
     mockMvc.perform(get("/api/v1/auth/usuarios/" + user.getId() + "/perfil"))
@@ -242,7 +254,13 @@ class UsuarioIntegrationTest {
 
   @Test
   void debeListarPostsYPremiosDeUnUsuario() throws Exception {
-    Usuario user = Usuario.builder().username("content@test.com").password("hash").nombre("Content").role(Role.USUARIO).build();
+    Usuario user = Usuario.builder()
+        .username("content@test.com")
+        .password("hash")
+        .nombre("Content")
+        .role(Role.USUARIO)
+        .verificado(true)
+        .build();
     user = usuarioRepository.save(user);
 
     mockMvc.perform(get("/api/v1/auth/usuarios/" + user.getId() + "/posts"))
