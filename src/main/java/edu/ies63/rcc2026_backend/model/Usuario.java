@@ -65,6 +65,11 @@ public class Usuario implements UserDetails {
     @Column(name = "fecha_registro", nullable = false, updatable = false)
     private LocalDateTime fechaRegistro;
 
+    // NUEVO: fecha y hora en que aceptó los Términos y Condiciones al registrarse.
+    // La toma el servidor (no viene del cliente). Null en cuentas creadas antes de este cambio.
+    @Column(name = "fecha_aceptacion_terminos")
+    private LocalDateTime fechaAceptacionTerminos;
+
     // en vez de eliminar la cuenta, estado de cuenta
     private boolean debaja = false;
 

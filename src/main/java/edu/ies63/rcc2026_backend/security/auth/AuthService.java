@@ -81,6 +81,7 @@ public class AuthService {
         .role(Role.USUARIO)          // ← rol FIJO, no viene del cliente
         .debaja(false)
         .verificado(false)
+        .fechaAceptacionTerminos(LocalDateTime.now()) // NUEVO: aceptó los términos al registrarse
         .build();
 
     // 1. Guardar el usuario primero para que obtenga su ID en la BD
@@ -108,6 +109,7 @@ public class AuthService {
         .role(Role.ORGANIZADOR)      // ← rol FIJO
         .debaja(false)
         .verificado(false)
+        .fechaAceptacionTerminos(LocalDateTime.now()) // NUEVO: aceptó los términos al registrarse
         .build();
 
     // 1. Guardar el usuario primero para que obtenga su ID en la BD
@@ -135,6 +137,7 @@ public class AuthService {
         .role(Role.GRUPO)            // ← rol FIJO
         .debaja(false)
         .verificado(false)
+        .fechaAceptacionTerminos(LocalDateTime.now()) // NUEVO: aceptó los términos al registrarse
         .build();
 
     // 1. Guardar el usuario primero para que obtenga su ID en la BD
