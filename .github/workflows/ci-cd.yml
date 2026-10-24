@@ -36,8 +36,14 @@ jobs:
       - name: Compilar y empaquetar con Maven
         run: |
           chmod +x mvnw
-          ./mvnw -B clean package -DskipTests
-
+          ./mvnw -B clean verify
+      # 3b. Guardar el reporte de JaCoCo
+      - name: Subir reporte de cobertura
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-report
+          path: target/site/jacoco/
       # 4. Crear el .env que pide docker-compose.yml (en CI no existe porque está en .gitignore).
       #    Usa los secrets del repo si existen; si no, valores de prueba generados al vuelo.
       - name: Generar .env para CI
