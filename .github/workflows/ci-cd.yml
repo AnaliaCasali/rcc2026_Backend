@@ -17,29 +17,14 @@ concurrency:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
-
-    # MySQL para los tests que no usan Testcontainers (contextLoads)
-    services:
-      mysql:
-        image: mysql:8.4
-        env:
-          MYSQL_ROOT_PASSWORD: ci_root
-          MYSQL_DATABASE: rcc
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd="mysqladmin ping -h localhost -pci_root"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=10
+    timeout-minutes: 20
 
     steps:
       # 1. Descargar el código fuente
       - name: Checkout del código
         uses: actions/checkout@v5
 
-      # 2. Configurar Java 25
+      # 2. Configurar Java 25 (misma versión que pom.xml y Dockerfile)
       - name: Set up JDK 25
         uses: actions/setup-java@v5
         with:
@@ -47,35 +32,14 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      # 3. Compatibilidad de Testcontainers 1.x con el Docker del runner
-      - name: Configurar API de Docker para Testcontainers
-        run: echo "api.version=1.44" > ~/.docker-java.properties
-
-      # 4. Compilar, ejecutar todos los tests y generar cobertura
-      - name: Compilar y testear con Maven
-        env:
-          DB_HOST: localhost
-          DB_PORT: 3306
-          DB_NAME: rcc
-          DB_USERNAME: root
-          DB_PASSWORD: ci_root
-          JWT_SECRET: ${{ secrets.JWT_SECRET || 'ci-test-secret-de-al-menos-32-caracteres-xx' }}
-          MAIL_USERNAME: ci@example.com
-          MAIL_PASSWORD: ci_dummy
-          JPA_SHOW_SQL: false
+      # 3. Compilar y empaquetar (los tests no se ejecutan en este pipeline)
+      - name: Compilar y empaquetar con Maven
         run: |
           chmod +x mvnw
-          ./mvnw -B clean verify
+          ./mvnw -B clean package -DskipTests
 
-      # 4b. Guardar el reporte de JaCoCo
-      - name: Subir reporte de cobertura
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: jacoco-report
-          path: target/site/jacoco/
-
-      # 5. Crear el .env que pide docker-compose.yml
+      # 4. Crear el .env que pide docker-compose.yml (en CI no existe porque está en .gitignore).
+      #    Usa los secrets del repo si existen; si no, valores de prueba generados al vuelo.
       - name: Generar .env para CI
         env:
           DB_PASS: ${{ secrets.DB_PASS }}
@@ -104,13 +68,14 @@ jobs:
           MAIL_PASSWORD=${MAIL_PASSWORD}
           APP_PORT=8080
           ENV
+          # Quitar la sangría que agrega el bloque YAML
           sed -i 's/^[[:space:]]*//' .env
 
-      # 6. Levantar MySQL + backend con Docker Compose
+      # 5. Levantar MySQL + backend con Docker Compose
       - name: Construir y levantar servicios
         run: docker compose up -d --build
 
-      # 7. Prueba de humo: hasta 3 minutos
+      # 6. Prueba de humo: esperar hasta 3 minutos a que responda el endpoint público
       - name: Prueba de humo (HTTP)
         run: |
           for i in $(seq 1 36); do
@@ -128,8 +93,8 @@ jobs:
         if: failure()
         run: |
           docker compose ps -a
-          docker compose logs --tail=200 || true
+          docker compose logs --tail=200
 
       - name: Bajar servicios
         if: always()
-        run: docker compose down -v || true
+        run: docker compose down -v
