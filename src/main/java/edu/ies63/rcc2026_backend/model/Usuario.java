@@ -108,7 +108,7 @@ public class Usuario implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return UserDetails.super.isEnabled();
+        return this.verificado;
     }
 
 }

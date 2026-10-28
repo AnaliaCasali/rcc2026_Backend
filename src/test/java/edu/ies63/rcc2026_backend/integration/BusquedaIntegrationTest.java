@@ -5,8 +5,16 @@ import edu.ies63.rcc2026_backend.enums.Provincia;
 import edu.ies63.rcc2026_backend.enums.Role;
 import edu.ies63.rcc2026_backend.model.Localidad;
 import edu.ies63.rcc2026_backend.model.Usuario;
+import edu.ies63.rcc2026_backend.repository.EventoRepository;
+import edu.ies63.rcc2026_backend.repository.GrupoEventoRepository;
 import edu.ies63.rcc2026_backend.repository.LocalidadRepository;
+import edu.ies63.rcc2026_backend.repository.NotificacionRepository;
+import edu.ies63.rcc2026_backend.repository.PasswordResetTokenRepository;
+import edu.ies63.rcc2026_backend.repository.PostLikeRepository;
+import edu.ies63.rcc2026_backend.repository.PostRepository;
+import edu.ies63.rcc2026_backend.repository.SeguidoRepository;
 import edu.ies63.rcc2026_backend.repository.UsuarioRepository;
+import edu.ies63.rcc2026_backend.repository.VerificationTokenRepository;
 import edu.ies63.rcc2026_backend.security.jwt.JwtService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -59,12 +67,45 @@ class BusquedaIntegrationTest {
     private LocalidadRepository localidadRepository;
 
     @Autowired
+    private NotificacionRepository notificacionRepository;
+
+    @Autowired
+    private GrupoEventoRepository grupoEventoRepository;
+
+    @Autowired
+    private EventoRepository eventoRepository;
+
+    @Autowired
+    private PostLikeRepository postLikeRepository;
+
+    @Autowired
+    private PostRepository postRepository;
+
+    @Autowired
+    private SeguidoRepository seguidoRepository;
+
+    @Autowired
+    private VerificationTokenRepository verificationTokenRepository;
+
+    @Autowired
+    private PasswordResetTokenRepository passwordResetTokenRepository;
+
+    @Autowired
     private JwtService jwtService;
 
     private String token;
 
     @BeforeEach
     void setUp() {
+        notificacionRepository.deleteAll();
+        grupoEventoRepository.deleteAll();
+        eventoRepository.deleteAll();
+        postLikeRepository.deleteAll();
+        postRepository.deleteAll();
+        seguidoRepository.deleteAll();
+        verificationTokenRepository.deleteAll();
+        passwordResetTokenRepository.deleteAll();
+
         usuarioRepository.deleteAll();
         localidadRepository.deleteAll();
 
@@ -94,6 +135,7 @@ class BusquedaIntegrationTest {
                 .biografia("Danzas tradicionales")
                 .localidad(lasToscas)
                 .debaja(false)
+                .verificado(true)
                 .build();
         usuarioRepository.save(grupo);
 
@@ -105,6 +147,7 @@ class BusquedaIntegrationTest {
                 .biografia("Organización de eventos")
                 .localidad(lasToscas)
                 .debaja(false)
+                .verificado(true)
                 .build();
         usuarioRepository.save(organizador);
 
@@ -115,6 +158,7 @@ class BusquedaIntegrationTest {
                 .role(Role.USUARIO) // Este nunca debe aparecer en los resultados
                 .localidad(lasToscas)
                 .debaja(false)
+                .verificado(true)
                 .build();
         usuarioRepository.save(usuarioComun);
 

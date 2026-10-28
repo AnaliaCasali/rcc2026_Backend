@@ -62,68 +62,57 @@ class AuthControllerTest {
 
 
     @Test
-    @DisplayName("POST /api/v1/auth/register/usuario responde 201 Created")
+    @DisplayName("POST /api/v1/auth/register/usuario responde 201 Created sin JWT")
     void registerUsuario_Exito() throws Exception {
         UsuarioCreateDTO request = new UsuarioCreateDTO(
-                "juan@ejemplo.com",
-                "Juan Perez",
-                "Password123!",
-                "Bio de prueba",
-                1L
+            "juan@ejemplo.com", "Juan Perez", "Password123!", "Bio de prueba", 1L
         );
-        AuthResponse response = new AuthResponse("mocked-jwt-token");
+        RegistroResponseDTO response = new RegistroResponseDTO("Usuario registrado con éxito...", "juan@ejemplo.com");
 
         when(authService.registerUsuario(any(UsuarioCreateDTO.class))).thenReturn(response);
 
         mockMvc.perform(post("/api/v1/auth/register/usuario")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.token").value("mocked-jwt-token"));
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.message").exists())
+            .andExpect(jsonPath("$.username").value("juan@ejemplo.com"));
     }
 
     @Test
-    @DisplayName("POST /api/v1/auth/register/organizador responde 201 Created")
+    @DisplayName("POST /api/v1/auth/register/organizador responde 201 Created sin JWT")
     void registerOrganizador_Exito() throws Exception {
         OrganizadorCreateDTO request = new OrganizadorCreateDTO(
-                "org@ejemplo.com",
-                "Organización RCC",
-                "Password123!",
-                "Bio org",
-                "Director Responsable",
-                1L
+            "org@ejemplo.com", "Organización RCC", "Password123!", "Bio org", "Director", 1L
         );
-        AuthResponse response = new AuthResponse("mocked-jwt-token");
+        RegistroResponseDTO response = new RegistroResponseDTO("Organizador registrado...", "org@ejemplo.com");
 
         when(authService.registerOrganizador(any(OrganizadorCreateDTO.class))).thenReturn(response);
 
         mockMvc.perform(post("/api/v1/auth/register/organizador")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.token").value("mocked-jwt-token"));
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.message").exists())
+            .andExpect(jsonPath("$.username").value("org@ejemplo.com"));
     }
 
     @Test
-    @DisplayName("POST /api/v1/auth/register/grupo responde 201 Created")
+    @DisplayName("POST /api/v1/auth/register/grupo responde 201 Created sin JWT")
     void registerGrupo_Exito() throws Exception {
         GrupoCreateDTO request = new GrupoCreateDTO(
-                "grupo@ejemplo.com",
-                "Grupo Coral",
-                "Password123!",
-                "Bio grupo",
-                "Director Coral",
-                1L
+            "grupo@ejemplo.com", "Grupo Coral", "Password123!", "Bio grupo", "Director", 1L
         );
-        AuthResponse response = new AuthResponse("mocked-jwt-token");
+        RegistroResponseDTO response = new RegistroResponseDTO("Grupo registrado...", "grupo@ejemplo.com");
 
         when(authService.registerGrupo(any(GrupoCreateDTO.class))).thenReturn(response);
 
         mockMvc.perform(post("/api/v1/auth/register/grupo")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.token").value("mocked-jwt-token"));
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.message").exists())
+            .andExpect(jsonPath("$.username").value("grupo@ejemplo.com"));
     }
 
     @Test
@@ -167,4 +156,15 @@ class AuthControllerTest {
             .andExpect(jsonPath("$.message").value("Cuenta verificada con éxito. Ya puedes iniciar sesión."));
     }
 
+    @Test
+    @DisplayName("POST /api/v1/auth/resend-verification responde 200 OK")
+    void resendVerification_Exito() throws Exception {
+        doNothing().when(authService).resendVerificationEmail("usuario@ejemplo.com");
+
+        mockMvc.perform(post("/api/v1/auth/resend-verification")
+                .param("email", "usuario@ejemplo.com")
+                .contentType(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.message").exists());
+    }
 }

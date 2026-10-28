@@ -52,6 +52,7 @@ class UsuarioTest {
     // Asignamos un rol para evitar el NullPointerException al evaluar getAuthorities()
     Usuario usuario = Usuario.builder()
         .role(Role.USUARIO) // Cualquier valor asignado será evaluado
+        .verificado(true)
         .build();
 
     // Validaciones por defecto de UserDetails
@@ -63,6 +64,11 @@ class UsuarioTest {
     // Validamos que getAuthorities() devuelva las autoridades correspondientes al rol
     assertFalse(usuario.getAuthorities().isEmpty());
     assertEquals(2, usuario.getAuthorities().size());
+
+    Usuario usuarioNoVerificado = Usuario.builder()
+        .role(Role.USUARIO)
+        .build(); // Por defecto verificado es false
+    assertFalse(usuarioNoVerificado.isEnabled());
   }
 
   @Test

@@ -20,7 +20,12 @@ import edu.ies63.rcc2026_backend.repository.EventoRepository;
 import edu.ies63.rcc2026_backend.repository.GrupoEventoRepository;
 import edu.ies63.rcc2026_backend.repository.LocalidadRepository;
 import edu.ies63.rcc2026_backend.repository.NotificacionRepository;
+import edu.ies63.rcc2026_backend.repository.PasswordResetTokenRepository;
+import edu.ies63.rcc2026_backend.repository.PostLikeRepository;
+import edu.ies63.rcc2026_backend.repository.PostRepository;
+import edu.ies63.rcc2026_backend.repository.SeguidoRepository;
 import edu.ies63.rcc2026_backend.repository.UsuarioRepository;
+import edu.ies63.rcc2026_backend.repository.VerificationTokenRepository;
 import edu.ies63.rcc2026_backend.security.jwt.JwtService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -79,13 +84,28 @@ class EventoIntegrationTest {
     private LocalidadRepository localidadRepository;
 
     @Autowired
-    private EventoRepository eventoRepository;
+    private NotificacionRepository notificacionRepository;
 
     @Autowired
     private GrupoEventoRepository grupoEventoRepository;
 
     @Autowired
-    private NotificacionRepository notificacionRepository;
+    private EventoRepository eventoRepository;
+
+    @Autowired
+    private PostLikeRepository postLikeRepository;
+
+    @Autowired
+    private PostRepository postRepository;
+
+    @Autowired
+    private SeguidoRepository seguidoRepository;
+
+    @Autowired
+    private VerificationTokenRepository verificationTokenRepository;
+
+    @Autowired
+    private PasswordResetTokenRepository passwordResetTokenRepository;
 
     @Autowired
     private JwtService jwtService;
@@ -103,6 +123,12 @@ class EventoIntegrationTest {
         notificacionRepository.deleteAll();
         grupoEventoRepository.deleteAll();
         eventoRepository.deleteAll();
+        postLikeRepository.deleteAll();
+        postRepository.deleteAll();
+        seguidoRepository.deleteAll();
+        verificationTokenRepository.deleteAll();
+        passwordResetTokenRepository.deleteAll();
+
         usuarioRepository.deleteAll();
         localidadRepository.deleteAll();
 
@@ -120,6 +146,7 @@ class EventoIntegrationTest {
                 .nombre("Centro Cultural")
                 .role(Role.ORGANIZADOR)
                 .localidad(localidadTest)
+                .verificado(true)
                 .imagenesPerfil(new ArrayList<>())
                 .redes(new ArrayList<>())
                 .build();
@@ -132,6 +159,7 @@ class EventoIntegrationTest {
                 .nombre("Banda del Norte")
                 .role(Role.GRUPO)
                 .localidad(localidadTest)
+                .verificado(true)
                 .imagenesPerfil(new ArrayList<>())
                 .redes(new ArrayList<>())
                 .build();
@@ -267,6 +295,7 @@ class EventoIntegrationTest {
                 .nombre("Usuario Ajeno")
                 .role(Role.USUARIO)
                 .localidad(localidadTest)
+                .verificado(true)
                 .imagenesPerfil(new ArrayList<>())
                 .redes(new ArrayList<>())
                 .build();

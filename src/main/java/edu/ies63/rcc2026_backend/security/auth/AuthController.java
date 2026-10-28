@@ -40,29 +40,32 @@ public class AuthController {
       }*/
   @PostMapping("/register/usuario")
   @Operation(summary = "Registrar usuario estándar")
-  public ResponseEntity<AuthResponse> registerUsuario(
-      @Valid @RequestBody UsuarioCreateDTO request) {
+  public ResponseEntity<RegistroResponseDTO> registerUsuario(
+      @RequestBody @Valid UsuarioCreateDTO request) {
+    RegistroResponseDTO response = authService.registerUsuario(request);
     return ResponseEntity
         .status(HttpStatus.CREATED)
-        .body(authService.registerUsuario(request));
+        .body(response);
   }
 
   @PostMapping("/register/organizador")
   @Operation(summary = "Registrar organizador")
-  public ResponseEntity<AuthResponse> registerOrganizador(
-      @Valid @RequestBody OrganizadorCreateDTO request) {
+  public ResponseEntity<RegistroResponseDTO> registerOrganizador(
+      @RequestBody @Valid OrganizadorCreateDTO request) {
+    RegistroResponseDTO response = authService.registerOrganizador(request);
     return ResponseEntity
         .status(HttpStatus.CREATED)
-        .body(authService.registerOrganizador(request));
+        .body(response);
   }
 
   @PostMapping("/register/grupo")
   @Operation(summary = "Registrar grupo")
-  public ResponseEntity<AuthResponse> registerGrupo(
-      @Valid @RequestBody GrupoCreateDTO request) {
+  public ResponseEntity<RegistroResponseDTO> registerGrupo(
+      @RequestBody @Valid GrupoCreateDTO request) {
+    RegistroResponseDTO response = authService.registerGrupo(request);
     return ResponseEntity
         .status(HttpStatus.CREATED)
-        .body(authService.registerGrupo(request));
+        .body(response);
   }
 
   @PostMapping("/forgot-password")
@@ -84,5 +87,12 @@ public class AuthController {
   public ResponseEntity<Map<String, String>> verifyAccount(@RequestParam String token) {
     authService.verifyAccount(token);
     return ResponseEntity.ok(Map.of("message", "Cuenta verificada con éxito. Ya puedes iniciar sesión."));
+  }
+
+  @PostMapping("/resend-verification")
+  public ResponseEntity<Map<String, String>> resendVerification(@RequestParam String email) {
+    authService.resendVerificationEmail(email);
+    // Siempre devolvemos el mismo mensaje para no revelar si el correo existe o no
+    return ResponseEntity.ok(Map.of("message", "Si el correo está registrado y sin verificar, se enviará un nuevo enlace."));
   }
 }

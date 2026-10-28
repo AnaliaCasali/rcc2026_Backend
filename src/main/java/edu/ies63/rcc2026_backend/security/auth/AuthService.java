@@ -20,6 +20,7 @@ import edu.ies63.rcc2026_backend.service.EmailService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -48,27 +49,32 @@ public class AuthService {
 
 
   public AuthResponse authenticate(AuthRequest request) {
-    // 1. Buscamos el usuario en la base de datos
     Usuario user = userRepository.findByUsername(request.username())
-        .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuario no encontrado"));
+        .orElseThrow(() -> new BadCredentialsException("Credenciales incorrectas"));
 
-    // 2. Como ya tenemos al usuario, nos fijamos si validó su correo
-    if (user.getVerificado() != null && !user.getVerificado()) {
-      throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Por favor, verifica tu cuenta en el correo electrónico antes de iniciar sesión.");
+    if (!passwordEncoder.matches(request.password(), user.getPassword())) {
+      throw new BadCredentialsException("Credenciales incorrectas");
     }
 
-    // 3. Si el usuario existe y está verificado, validamos los datos
+    if (!user.getVerificado()) {
+      throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Cuenta no verificada. Por favor revisa tu correo.");
+    }
+
     authenticationManager.authenticate(
         new UsernamePasswordAuthenticationToken(request.username(), request.password())
     );
 
+    Map<String, Object> extraClaims = new HashMap<>();
+    extraClaims.put("rol", user.getRole().name());
+    extraClaims.put("id", user.getId());
+    extraClaims.put("name", user.getNombre());
+    String token = jwtService.generateToken(extraClaims, user);
 
-
-    return guardarYGenerarToken(user);
+    return new AuthResponse(token);
   }
 
   @Transactional
-  public AuthResponse registerUsuario(UsuarioCreateDTO request) {
+  public RegistroResponseDTO registerUsuario(UsuarioCreateDTO request) {
     validarUsernameDisponible(request.username());
     Localidad localidad = resolverLocalidad(request.localidadId());
 
@@ -78,51 +84,23 @@ public class AuthService {
         .password(passwordEncoder.encode(request.password()))
         .biografia(request.biografia())
         .localidad(localidad)
-        .role(Role.USUARIO)          // ← rol FIJO, no viene del cliente
+        .role(Role.USUARIO)
         .debaja(false)
         .verificado(false)
         .fechaAceptacionTerminos(LocalDateTime.now()) // NUEVO: aceptó los términos al registrarse
         .build();
-
-    // 1. Guardar el usuario primero para que obtenga su ID en la BD
     userRepository.save(user);
 
-    // 2. Generar el token y enviar el correo usando tu método auxiliar
     generarYEnviarTokenVerificacion(user);
 
-    return guardarYGenerarToken(user);
+    return new RegistroResponseDTO(
+        "Usuario registrado con éxito. Por favor, revisá tu correo para activar la cuenta.",
+        user.getUsername()
+    );
   }
 
   @Transactional
-  public AuthResponse registerOrganizador(OrganizadorCreateDTO request) {
-    validarUsernameDisponible(request.username());
-
-    Localidad localidad = resolverLocalidad(request.localidadId());
-
-    Usuario user = Usuario.builder()
-        .nombre(request.nombre())
-        .username(request.username())
-        .password(passwordEncoder.encode(request.password()))
-        .biografia(request.biografia())
-        .director(request.director())
-        .localidad(localidad)
-        .role(Role.ORGANIZADOR)      // ← rol FIJO
-        .debaja(false)
-        .verificado(false)
-        .fechaAceptacionTerminos(LocalDateTime.now()) // NUEVO: aceptó los términos al registrarse
-        .build();
-
-    // 1. Guardar el usuario primero para que obtenga su ID en la BD
-    userRepository.save(user);
-
-    // 2. Generar el token y enviar el correo usando tu método auxiliar
-    generarYEnviarTokenVerificacion(user);
-
-    return guardarYGenerarToken(user);
-  }
-
-  @Transactional
-  public AuthResponse registerGrupo(GrupoCreateDTO request) {
+  public RegistroResponseDTO registerOrganizador(OrganizadorCreateDTO request) {
     validarUsernameDisponible(request.username());
 
     Localidad localidad = resolverLocalidad(request.localidadId());
@@ -134,19 +112,49 @@ public class AuthService {
         .biografia(request.biografia())
         .director(request.director())
         .localidad(localidad)
-        .role(Role.GRUPO)            // ← rol FIJO
+        .role(Role.ORGANIZADOR)
         .debaja(false)
         .verificado(false)
         .fechaAceptacionTerminos(LocalDateTime.now()) // NUEVO: aceptó los términos al registrarse
         .build();
 
-    // 1. Guardar el usuario primero para que obtenga su ID en la BD
     userRepository.save(user);
 
-    // 2. Generar el token y enviar el correo usando tu método auxiliar
     generarYEnviarTokenVerificacion(user);
 
-    return guardarYGenerarToken(user);
+    return new RegistroResponseDTO(
+        "Usuario registrado con éxito. Por favor, revisá tu correo para activar la cuenta.",
+        user.getUsername()
+    );
+  }
+
+  @Transactional
+  public RegistroResponseDTO registerGrupo(GrupoCreateDTO request) {
+    validarUsernameDisponible(request.username());
+
+    Localidad localidad = resolverLocalidad(request.localidadId());
+
+    Usuario user = Usuario.builder()
+        .nombre(request.nombre())
+        .username(request.username())
+        .password(passwordEncoder.encode(request.password()))
+        .biografia(request.biografia())
+        .director(request.director())
+        .localidad(localidad)
+        .role(Role.GRUPO)
+        .debaja(false)
+        .verificado(false)
+        .fechaAceptacionTerminos(LocalDateTime.now()) // NUEVO: aceptó los términos al registrarse
+        .build();
+
+    userRepository.save(user);
+
+    generarYEnviarTokenVerificacion(user);
+
+    return new RegistroResponseDTO(
+        "Usuario registrado con éxito. Por favor, revisá tu correo para activar la cuenta.",
+        user.getUsername()
+    );
   }
 
   // métodos privados para reutilizar
@@ -274,5 +282,32 @@ public class AuthService {
         .build();
     verificationTokenRepository.save(verificationToken);
     emailService.sendVerificationEmail(user.getUsername(), token);
+  }
+
+  @Transactional
+  public void resendVerificationEmail(String email) {
+    Usuario user = userRepository.findByUsername(email).orElse(null);
+
+    if (user == null || user.getVerificado()) {
+      return;
+    }
+
+    // Control de Spam (Rate Limiting)
+    Optional<VerificationToken> tokenPrevio = verificationTokenRepository.findByUsuario(user);
+    if (tokenPrevio.isPresent()) {
+      LocalDateTime fechaCreacionEstimada = tokenPrevio.get().getExpiryDate().minusHours(24);
+
+      if (fechaCreacionEstimada.plusMinutes(2).isAfter(LocalDateTime.now())) {
+        throw new ResponseStatusException(
+            HttpStatus.TOO_MANY_REQUESTS,
+            "Ya enviamos un enlace a tu correo. Por favor, esperá al menos 2 minutos antes de solicitar otro."
+        );
+      }
+    }
+
+    verificationTokenRepository.deleteByUsuario(user);
+    verificationTokenRepository.flush();
+
+    generarYEnviarTokenVerificacion(user);
   }
 }
